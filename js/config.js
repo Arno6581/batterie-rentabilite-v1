@@ -193,3 +193,49 @@ function baseLoadShape(){
 window.lastP1Curve = null;
 window.lastPVCurve = null;
 window.detectedAppliances = [];
+
+// ============================================================
+// PERSISTENT STORAGE FOR P1 & BATTERY ENTRIES (auto-save)
+// ============================================================
+
+function saveP1Entries(){
+  localStorage.setItem('battery_sim_p1_entries', JSON.stringify(currentProfile.p1Entries));
+}
+
+function loadP1Entries(){
+  const saved = localStorage.getItem('battery_sim_p1_entries');
+  if(saved){
+    try {
+      currentProfile.p1Entries = JSON.parse(saved);
+    } catch(e){
+      console.error('Erreur chargement P1 entries:', e);
+    }
+  }
+}
+
+function saveBatteryOffers(){
+  localStorage.setItem('battery_sim_battery_offers', JSON.stringify(currentProfile.batteryOffers));
+}
+
+function loadBatteryOffers(){
+  const saved = localStorage.getItem('battery_sim_battery_offers');
+  if(saved){
+    try {
+      currentProfile.batteryOffers = JSON.parse(saved);
+    } catch(e){
+      console.error('Erreur chargement battery offers:', e);
+    }
+  }
+}
+
+function clearP1Entries(){
+  currentProfile.p1Entries = [];
+  saveP1Entries();
+  refreshP1Table();
+}
+
+function clearBatteryOffers(){
+  currentProfile.batteryOffers = [];
+  saveBatteryOffers();
+  refreshBattTable();
+}
