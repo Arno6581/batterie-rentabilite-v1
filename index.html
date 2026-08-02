@@ -4,57 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Simulateur Rentabilité Batterie v1.1</title>
+<link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<style>
-  :root {
-    --bg: #0f1117; --card: #1a1d29; --accent: #4ade80; --accent2: #60a5fa;
-    --text: #e5e7eb; --muted: #9ca3af; --border: #2d3142; --danger: #f87171; --warning: #fbbf24;
-  }
-  * { box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 0; }
-  header { background: var(--card); padding: 16px 24px; border-bottom: 1px solid var(--border); }
-  header h1 { margin: 0; font-size: 1.3rem; }
-  header p { margin: 4px 0 0; color: var(--muted); font-size: 0.85rem; }
-  nav.tabs { display: flex; gap: 4px; background: var(--card); padding: 0 24px; border-bottom: 1px solid var(--border); overflow-x: auto; }
-  nav.tabs button { background: none; border: none; color: var(--muted); padding: 12px 16px; cursor: pointer; font-size: 0.9rem; border-bottom: 2px solid transparent; white-space: nowrap; }
-  nav.tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
-  main { padding: 24px; max-width: 1200px; margin: 0 auto; }
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-  .card h2 { margin-top: 0; font-size: 1.1rem; }
-  .card h3 { font-size: 0.95rem; color: var(--accent2); }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-  label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; margin-top: 10px; }
-  input, select { width: 100%; background: #12141c; border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 6px; font-size: 0.9rem; }
-  input[type="checkbox"] { width: auto; }
-  button.btn { background: var(--accent2); color: #0f1117; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; margin-top: 12px; margin-right: 8px; }
-  button.btn.secondary { background: var(--border); color: var(--text); }
-  button.btn.danger { background: var(--danger); color: #0f1117; }
-  button.btn.warning { background: var(--warning); color: #0f1117; }
-  .group-box { border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 12px; position: relative; }
-  .group-box .remove { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1rem; }
-  .badge { display: inline-block; background: var(--border); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; color: var(--muted); margin-left: 8px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-  th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-  th { color: var(--muted); font-weight: 500; }
-  .result-box { display: flex; gap: 16px; flex-wrap: wrap; margin: 16px 0; }
-  .result-item { background: #12141c; border-radius: 8px; padding: 14px 20px; flex: 1; min-width: 140px; }
-  .result-item .val { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
-  .result-item .lbl { font-size: 0.75rem; color: var(--muted); }
-  canvas { max-height: 350px; }
-  .profile-selector { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
-  .warn { background: #2d2410; border: 1px solid #7c6a1f; color: #fbbf24; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin: 12px 0; }
-  .success { background: #0d2818; border: 1px solid #16a34a; color: #4ade80; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin: 12px 0; }
-  .import-section { background: #12141c; border-left: 3px solid var(--accent2); padding: 14px; border-radius: 6px; margin: 12px 0; }
-  .detection-item { background: #1a1d29; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
-  .detection-item .info { flex: 1; }
-  .detection-item .actions { display: flex; gap: 6px; }
-  .detection-item button { padding: 4px 10px; font-size: 0.8rem; margin: 0; }
-</style>
 </head>
 <body>
 
@@ -73,12 +26,12 @@
 
 <main>
 
-  <!-- TAB 1: PROFILS (inchangé) -->
+  <!-- TAB 1: PROFILS -->
   <div class="tab-content active" id="tab-profils">
     <div class="card">
       <h2>Gestion des profils familiaux</h2>
-      <p style="color:var(--muted); font-size:0.85rem;">Chaque foyer crée son profil avec tarifs, panneaux, équipements. Stockage local.</p>
-      <div class="profile-selector">
+      <p style="color:var(--muted); font-size:0.85rem;">Chaque foyer crée son profil avec ses paramètres.</p>
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
         <select id="profileSelect" style="flex:1"></select>
         <button class="btn secondary" onclick="loadSelectedProfile()">Charger</button>
         <button class="btn danger" onclick="deleteSelectedProfile()">Supprimer</button>
@@ -90,7 +43,7 @@
     </div>
   </div>
 
-  <!-- TAB 2: CONFIGURATION (conservé de v1.0) -->
+  <!-- TAB 2: CONFIGURATION -->
   <div class="tab-content" id="tab-config">
     <div class="card">
       <h2>⚡ Tarifs électricité</h2>
@@ -100,36 +53,19 @@
         <option value="bi">Bi-horaire</option>
       </select>
       <div class="grid2">
-        <div>
-          <label id="lblConsumption">Prix consommation (€/kWh)</label>
-          <input type="number" step="0.001" id="tariffConsumption" value="0.369">
-        </div>
-        <div>
-          <label>Prix injection / rachat surplus (€/kWh)</label>
-          <input type="number" step="0.001" id="tariffInjection" value="0.0309">
-        </div>
+        <div><label id="lblConsumption">Prix consommation (€/kWh)</label><input type="number" step="0.001" id="tariffConsumption" value="0.369"></div>
+        <div><label>Prix injection (€/kWh)</label><input type="number" step="0.001" id="tariffInjection" value="0.0309"></div>
       </div>
       <div class="grid2" id="biHoraireFields" style="display:none;">
-        <div>
-          <label>Prix nuit (€/kWh)</label>
-          <input type="number" step="0.001" id="tariffNight" value="0.20">
-        </div>
-        <div>
-          <label>Heures nuit (début - fin)</label>
-          <div style="display:flex; gap:8px;">
-            <input type="time" id="nightStart" value="22:00">
-            <input type="time" id="nightEnd" value="06:00">
-          </div>
-        </div>
+        <div><label>Prix nuit (€/kWh)</label><input type="number" step="0.001" id="tariffNight" value="0.20"></div>
+        <div><label>Heures nuit</label><div style="display:flex; gap:8px;"><input type="time" id="nightStart" value="22:00"><input type="time" id="nightEnd" value="06:00"></div></div>
       </div>
     </div>
-
     <div class="card">
       <h2>☀️ Panneaux solaires</h2>
       <div id="pvGroupsContainer"></div>
       <button class="btn secondary" onclick="addPvGroup()">➕ Ajouter un groupe</button>
     </div>
-
     <div class="card">
       <h2>🏠 Gros consommateurs</h2>
       <div class="group-box">
@@ -140,7 +76,6 @@
           <div><label>Heure début</label><input type="number" min="0" max="23" id="wmHour" value="14"></div>
         </div>
       </div>
-
       <div class="group-box">
         <label><input type="checkbox" id="dwEnabled"> Lave-vaisselle</label>
         <div class="grid3">
@@ -149,7 +84,6 @@
           <div><label>Heure début</label><input type="number" min="0" max="23" id="dwHour" value="13"></div>
         </div>
       </div>
-
       <div class="group-box">
         <label><input type="checkbox" id="dryEnabled"> Sèche-linge</label>
         <div class="grid3">
@@ -158,89 +92,66 @@
           <div><label>Heure début</label><input type="number" min="0" max="23" id="dryHour" value="15"></div>
         </div>
       </div>
-
       <h3>Climatisation(s)</h3>
       <div id="acContainer"></div>
       <button class="btn secondary" onclick="addAcUnit()">➕ Ajouter climatisation</button>
-
       <h3>Véhicule électrique</h3>
       <div class="group-box">
         <label><input type="checkbox" id="evEnabled"> Voiture électrique</label>
         <div class="grid3">
-          <div><label>Capacité batterie (kWh)</label><input type="number" id="evCapacity" value="60"></div>
+          <div><label>Capacité (kWh)</label><input type="number" id="evCapacity" value="60"></div>
           <div><label>Puissance charge (kW)</label><input type="number" step="0.1" id="evPower" value="7.4"></div>
-          <div><label>Heure début charge</label><input type="number" min="0" max="23" id="evHour" value="22"></div>
+          <div><label>Heure début</label><input type="number" min="0" max="23" id="evHour" value="22"></div>
         </div>
-        <label>Énergie à charger (kWh)</label>
-        <input type="number" id="evChargeAmount" value="30">
+        <label>Énergie à charger (kWh)</label><input type="number" id="evChargeAmount" value="30">
       </div>
     </div>
   </div>
 
-  <!-- TAB 3: IMPORT DONNÉES (NOUVEAU) -->
+  <!-- TAB 3: IMPORT DONNÉES -->
   <div class="tab-content" id="tab-import">
-    
-    <!-- IMPORT P1 HOMEWIZARD -->
     <div class="card">
       <h2>📷 Import P1 HomeWizard</h2>
-      <p style="color:var(--muted); font-size:0.85rem;">Upload capture HomeWizard. OCR extrait Grid/Surplus/Date + analyse la courbe de consommation.</p>
-      
       <div class="import-section">
         <label><strong>Screenshot HomeWizard</strong></label>
         <input type="file" id="p1Image" accept="image/*" onchange="handleP1Image(event)">
         <div id="p1Status" style="margin-top:10px; color:var(--muted); font-size:0.85rem;"></div>
       </div>
-
       <div class="grid3" style="margin-top:16px;">
         <div><label>Date du relevé</label><input type="date" id="p1Date"></div>
         <div><label>Grid - Import (kWh)</label><input type="number" step="0.1" id="p1Grid"></div>
         <div><label>Surplus - Injection (kWh)</label><input type="number" step="0.1" id="p1Surplus"></div>
       </div>
-
-      <div id="p1AppliancessDetected" style="margin-top:16px; display:none;">
-        <h3>Équipements détectés (courbe P1)</h3>
-        <div id="p1DetectionsList"></div>
-      </div>
-
       <button class="btn" onclick="addP1Entry()">➕ Ajouter ce relevé P1</button>
     </div>
-
-    <!-- IMPORT PRODUCTION SOLAREDGE -->
     <div class="card">
       <h2>☀️ Import Production SolarEdge (optionnel)</h2>
-      <p style="color:var(--muted); font-size:0.85rem;">Upload capture dashboard SolarEdge. OCR extrait production totale + courbe horaire réelle.</p>
-      
       <div class="import-section">
         <label><strong>Screenshot SolarEdge</strong></label>
         <input type="file" id="pvImage" accept="image/*" onchange="handlePVImage(event)">
         <div id="pvStatus" style="margin-top:10px; color:var(--muted); font-size:0.85rem;"></div>
       </div>
-
       <div class="grid2" style="margin-top:16px;">
         <div><label>Date production</label><input type="date" id="pvDate"></div>
         <div><label>Production totale (kWh)</label><input type="number" step="0.1" id="pvTotal"></div>
       </div>
-
       <button class="btn" onclick="addPVEntry()">➕ Ajouter cette production</button>
     </div>
-
-    <!-- RELEVÉS ENREGISTRÉS -->
     <div class="card">
-      <h2>Relevés P1 enregistrés</h2>
+      <h2>Relevés enregistrés</h2>
       <table id="p1Table">
         <thead><tr><th>Date</th><th>Grid (kWh)</th><th>Surplus (kWh)</th><th>Production PV</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
-
   </div>
 
-  <!-- TAB 4: BATTERIES (conservé) -->
+  <!-- TAB 4: BATTERIES -->
   <div class="tab-content" id="tab-batteries">
     <div class="card">
       <h2>🔋 Offres de batteries</h2>
       <div class="grid3">
-        <div><label>Nom de l'offre</label><input type="text" id="battName" placeholder="Ex: Fournisseur A"></div>
+        <div><label>Nom</label><input type="text" id="battName" placeholder="Ex: Fournisseur A"></div>
         <div><label>Capacité (kWh)</label><input type="number" id="battCapacity" value="10"></div>
         <div><label>Puissance (kW)</label><input type="number" step="0.1" id="battPower" value="5"></div>
       </div>
@@ -260,34 +171,27 @@
     </div>
   </div>
 
-  <!-- TAB 5: SIMULATION (conservé) -->
+  <!-- TAB 5: SIMULATION -->
   <div class="tab-content" id="tab-simulation">
     <div class="card">
       <h2>Paramètres de simulation</h2>
       <div class="grid2">
-        <div>
-          <label>Relevé P1 à simuler</label>
-          <select id="simP1Select"></select>
-        </div>
-        <div>
-          <label>Offre batterie à tester</label>
-          <select id="simBattSelect"></select>
-        </div>
+        <div><label>Relevé P1</label><select id="simP1Select"></select></div>
+        <div><label>Offre batterie</label><select id="simBattSelect"></select></div>
       </div>
       <button class="btn" onclick="runSimulation()">▶️ Lancer la simulation</button>
       <button class="btn secondary" onclick="runAllBatteriesComparison()">📊 Comparer toutes les offres</button>
       <button class="btn secondary" onclick="exportPDF()">📄 Exporter en PDF</button>
     </div>
-
     <div id="simResults" style="display:none;">
       <div class="card">
         <h2>Résultats — journée simulée</h2>
         <div class="result-box">
-          <div class="result-item"><div class="val" id="resGridWithout">-</div><div class="lbl">Import réseau SANS batterie (kWh)</div></div>
-          <div class="result-item"><div class="val" id="resGridWith">-</div><div class="lbl">Import réseau AVEC batterie (kWh)</div></div>
+          <div class="result-item"><div class="val" id="resGridWithout">-</div><div class="lbl">Import SANS batterie (kWh)</div></div>
+          <div class="result-item"><div class="val" id="resGridWith">-</div><div class="lbl">Import AVEC batterie (kWh)</div></div>
           <div class="result-item"><div class="val" id="resDailySavings">-</div><div class="lbl">Économie journalière (€)</div></div>
-          <div class="result-item"><div class="val" id="resAnnualSavings">-</div><div class="lbl">Économie annuelle estimée (€)</div></div>
-          <div class="result-item"><div class="val" id="resPayback">-</div><div class="lbl">Retour sur investissement (années)</div></div>
+          <div class="result-item"><div class="val" id="resAnnualSavings">-</div><div class="lbl">Économie annuelle (€)</div></div>
+          <div class="result-item"><div class="val" id="resPayback">-</div><div class="lbl">Payback (années)</div></div>
         </div>
         <canvas id="chartDay"></canvas>
       </div>
@@ -296,7 +200,6 @@
         <canvas id="chartSoc"></canvas>
       </div>
     </div>
-
     <div id="comparisonResults" style="display:none;">
       <div class="card">
         <h2>Comparatif des offres</h2>
@@ -310,1349 +213,33 @@
 
 </main>
 
+<script src="js/config.js"></script>
+<script src="js/ui-forms.js"></script>
+<script src="js/ocr-extraction.js"></script>
+<script src="js/simulation.js"></script>
+<script src="js/charts-export.js"></script>
+
 <script>
-/* ============================================================
-   STATE & INITIALIZATION
-   ============================================================ */
-let currentProfile = defaultProfile();
-let chartDayInstance = null;
-let chartSocInstance = null;
-
-function defaultProfile(){
-  return {
-    name: "",
-    tariff: { mode: "mono", consumption: 0.369, night: 0.20, nightStart: "22:00", nightEnd: "06:00", injection: 0.0309 },
-    pvGroups: [
-      { panelPower: 320, panelCount: 4, tilt: 13, azimuth: 164 },
-      { panelPower: 320, panelCount: 11, tilt: 45, azimuth: 254 }
-    ],
-    equipment: {
-      washingMachine: { enabled: true, power: 2000, duration: 1.5, hour: 14 },
-      dishwasher: { enabled: true, power: 1500, duration: 2, hour: 13 },
-      dryer: { enabled: false, power: 2500, duration: 1.5, hour: 15 },
-      ac: [],
-      ev: { enabled: false, capacity: 60, power: 7.4, hour: 22, chargeAmount: 30 }
-    },
-    p1Entries: [],
-    batteryOffers: []
-  };
-}
-
-/* ============================================================
-   TAB NAVIGATION
-   ============================================================ */
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-    if(btn.dataset.tab === 'simulation') refreshSimulationSelects();
-  });
-});
-
-/* (Copier-coller des fonctions de v1.0 : profils, tariffs, PV, équipements, batteries) */
-/* ... [toutes les fonctions existantes de sauvegarde profils, sync, etc.] ... */
-
-/* TAB TOGGLE */
-function toggleTariffMode(){
-  const mode = document.getElementById('tariffMode').value;
-  document.getElementById('biHoraireFields').style.display = mode === 'bi' ? 'grid' : 'none';
-  document.getElementById('lblConsumption').textContent = mode === 'bi' ? 'Prix jour (€/kWh)' : 'Prix consommation (€/kWh)';
-}
-
-/* PV GROUPS */
-function addPvGroup(data){
-  data = data || { panelPower: 320, panelCount: 4, tilt: 30, azimuth: 180 };
-  const container = document.getElementById('pvGroupsContainer');
-  const box = document.createElement('div');
-  box.className = 'group-box pv-group-box';
-  box.innerHTML = `
-    <button class="remove" onclick="this.parentElement.remove()">✕</button>
-    <div class="grid2">
-      <div><label>Puissance unitaire (W)</label><input type="number" class="pv-power" value="${data.panelPower}"></div>
-      <div><label>Nombre de panneaux</label><input type="number" class="pv-count" value="${data.panelCount}"></div>
-    </div>
-    <div class="grid2">
-      <div><label>Inclinaison (°)</label><input type="number" class="pv-tilt" value="${data.tilt}"></div>
-      <div><label>Orientation azimuth (°)</label><input type="number" class="pv-azimuth" value="${data.azimuth}"></div>
-    </div>
-  `;
-  container.appendChild(box);
-}
-
-/* AC UNITS */
-function addAcUnit(data){
-  data = data || { name: "Climatisation", power: 1500, hours: [13,14,15,16,17] };
-  const container = document.getElementById('acContainer');
-  const box = document.createElement('div');
-  box.className = 'group-box ac-box';
-  box.innerHTML = `
-    <button class="remove" onclick="this.parentElement.remove()">✕</button>
-    <label>Nom</label><input type="text" class="ac-name" value="${data.name}">
-    <div class="grid2">
-      <div><label>Puissance (W)</label><input type="number" class="ac-power" value="${data.power}"></div>
-      <div><label>Heures actives (ex: 13,14,15)</label><input type="text" class="ac-hours" value="${data.hours.join(',')}"></div>
-    </div>
-  `;
-  container.appendChild(box);
-}
-
-/* SYNC PROFILE */
-function syncFormToProfile(){
-  currentProfile.tariff.mode = document.getElementById('tariffMode').value;
-  currentProfile.tariff.consumption = parseFloat(document.getElementById('tariffConsumption').value) || 0;
-  currentProfile.tariff.injection = parseFloat(document.getElementById('tariffInjection').value) || 0;
-  currentProfile.tariff.night = parseFloat(document.getElementById('tariffNight').value) || 0;
-  currentProfile.tariff.nightStart = document.getElementById('nightStart').value;
-  currentProfile.tariff.nightEnd = document.getElementById('nightEnd').value;
-
-  currentProfile.pvGroups = [];
-  document.querySelectorAll('.pv-group-box').forEach(box => {
-    currentProfile.pvGroups.push({
-      panelPower: parseFloat(box.querySelector('.pv-power').value) || 0,
-      panelCount: parseInt(box.querySelector('.pv-count').value) || 0,
-      tilt: parseFloat(box.querySelector('.pv-tilt').value) || 0,
-      azimuth: parseFloat(box.querySelector('.pv-azimuth').value) || 0
-    });
-  });
-
-  currentProfile.equipment.washingMachine = {
-    enabled: document.getElementById('wmEnabled').checked,
-    power: parseFloat(document.getElementById('wmPower').value) || 0,
-    duration: parseFloat(document.getElementById('wmDuration').value) || 0,
-    hour: parseInt(document.getElementById('wmHour').value) || 0
-  };
-
-  currentProfile.equipment.dishwasher = {
-    enabled: document.getElementById('dwEnabled').checked,
-    power: parseFloat(document.getElementById('dwPower').value) || 0,
-    duration: parseFloat(document.getElementById('dwDuration').value) || 0,
-    hour: parseInt(document.getElementById('dwHour').value) || 0
-  };
-
-  currentProfile.equipment.dryer = {
-    enabled: document.getElementById('dryEnabled').checked,
-    power: parseFloat(document.getElementById('dryPower').value) || 0,
-    duration: parseFloat(document.getElementById('dryDuration').value) || 0,
-    hour: parseInt(document.getElementById('dryHour').value) || 0
-  };
-
-  currentProfile.equipment.ac = [];
-  document.querySelectorAll('.ac-box').forEach(box => {
-    const hoursStr = box.querySelector('.ac-hours').value;
-    const hours = hoursStr.split(',').map(h => parseInt(h.trim())).filter(h => !isNaN(h));
-    currentProfile.equipment.ac.push({
-      name: box.querySelector('.ac-name').value,
-      power: parseFloat(box.querySelector('.ac-power').value) || 0,
-      hours: hours
-    });
-  });
-
-  currentProfile.equipment.ev = {
-    enabled: document.getElementById('evEnabled').checked,
-    capacity: parseFloat(document.getElementById('evCapacity').value) || 0,
-    power: parseFloat(document.getElementById('evPower').value) || 0,
-    hour: parseInt(document.getElementById('evHour').value) || 0,
-    chargeAmount: parseFloat(document.getElementById('evChargeAmount').value) || 0
-  };
-}
-
-function syncProfileToForm(){
-  document.getElementById('tariffMode').value = currentProfile.tariff.mode;
-  document.getElementById('tariffConsumption').value = currentProfile.tariff.consumption;
-  document.getElementById('tariffInjection').value = currentProfile.tariff.injection;
-  document.getElementById('tariffNight').value = currentProfile.tariff.night;
-  document.getElementById('nightStart').value = currentProfile.tariff.nightStart;
-  document.getElementById('nightEnd').value = currentProfile.tariff.nightEnd;
-  toggleTariffMode();
-
-  document.getElementById('pvGroupsContainer').innerHTML = '';
-  currentProfile.pvGroups.forEach(g => addPvGroup(g));
-
-  const wm = currentProfile.equipment.washingMachine;
-  document.getElementById('wmEnabled').checked = wm.enabled;
-  document.getElementById('wmPower').value = wm.power;
-  document.getElementById('wmDuration').value = wm.duration;
-  document.getElementById('wmHour').value = wm.hour;
-
-  const dw = currentProfile.equipment.dishwasher;
-  document.getElementById('dwEnabled').checked = dw.enabled;
-  document.getElementById('dwPower').value = dw.power;
-  document.getElementById('dwDuration').value = dw.duration;
-  document.getElementById('dwHour').value = dw.hour;
-
-  const dry = currentProfile.equipment.dryer;
-  document.getElementById('dryEnabled').checked = dry.enabled;
-  document.getElementById('dryPower').value = dry.power;
-  document.getElementById('dryDuration').value = dry.duration;
-  document.getElementById('dryHour').value = dry.hour;
-
-  document.getElementById('acContainer').innerHTML = '';
-  currentProfile.equipment.ac.forEach(ac => addAcUnit(ac));
-
-  const ev = currentProfile.equipment.ev;
-  document.getElementById('evEnabled').checked = ev.enabled;
-  document.getElementById('evCapacity').value = ev.capacity;
-  document.getElementById('evPower').value = ev.power;
-  document.getElementById('evHour').value = ev.hour;
-  document.getElementById('evChargeAmount').value = ev.chargeAmount;
-
-  refreshP1Table();
-  refreshBattTable();
-}
-
-/* PROFILE MANAGEMENT */
-function getProfilesList(){
-  return JSON.parse(localStorage.getItem('battery_sim_profiles') || '{}');
-}
-function saveProfilesList(profiles){
-  localStorage.setItem('battery_sim_profiles', JSON.stringify(profiles));
-}
-function refreshProfileSelect(){
-  const profiles = getProfilesList();
-  const sel = document.getElementById('profileSelect');
-  sel.innerHTML = '<option value="">-- Sélectionner --</option>';
-  Object.keys(profiles).forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name; opt.textContent = name;
-    sel.appendChild(opt);
-  });
-}
-function saveCurrentProfile(){
-  syncFormToProfile();
-  const name = document.getElementById('profileName').value.trim();
-  if(!name){ alert("Merci d'indiquer un nom de profil."); return; }
-  currentProfile.name = name;
-  const profiles = getProfilesList();
-  profiles[name] = currentProfile;
-  saveProfilesList(profiles);
-  refreshProfileSelect();
-  alert("Profil '" + name + "' sauvegardé.");
-}
-function loadSelectedProfile(){
-  const name = document.getElementById('profileSelect').value;
-  if(!name) return;
-  const profiles = getProfilesList();
-  currentProfile = profiles[name];
-  document.getElementById('profileName').value = name;
-  syncProfileToForm();
-  alert("Profil '" + name + "' chargé.");
-}
-function deleteSelectedProfile(){
-  const name = document.getElementById('profileSelect').value;
-  if(!name) return;
-  if(!confirm("Supprimer '" + name + "' ?")) return;
-  const profiles = getProfilesList();
-  delete profiles[name];
-  saveProfilesList(profiles);
-  refreshProfileSelect();
-}
-function newProfile(){
-  currentProfile = defaultProfile();
-  document.getElementById('profileName').value = '';
-  syncProfileToForm();
-}
-
-/* BATTERIES */
-function addBatteryOffer(){
-  const name = document.getElementById('battName').value.trim();
-  const capacity = parseFloat(document.getElementById('battCapacity').value);
-  const power = parseFloat(document.getElementById('battPower').value);
-  const cost = parseFloat(document.getElementById('battCost').value);
-  const efficiency = parseFloat(document.getElementById('battEfficiency').value) / 100;
-  if(!name || isNaN(capacity) || isNaN(cost)){
-    alert("Merci de compléter au moins le nom, la capacité et le coût.");
-    return;
-  }
-  currentProfile.batteryOffers.push({ name, capacity, power, cost, efficiency });
-  refreshBattTable();
-  document.getElementById('battName').value = '';
-}
-function refreshBattTable(){
-  const tbody = document.querySelector('#battTable tbody');
-  tbody.innerHTML = '';
-  currentProfile.batteryOffers.forEach((b, idx) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${b.name}</td><td>${b.capacity}kWh</td><td>${b.power}kW</td><td>${b.cost}€</td>
-      <td><button class="btn danger" style="padding:4px 10px;margin:0;" onclick="removeBattOffer(${idx})">✕</button></td>`;
-    tbody.appendChild(tr);
-  });
-}
-function removeBattOffer(idx){
-  currentProfile.batteryOffers.splice(idx, 1);
-  refreshBattTable();
-}
-
+// Init
 window.addEventListener('DOMContentLoaded', () => {
   refreshProfileSelect();
   syncProfileToForm();
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('p1Date').value = today;
   document.getElementById('pvDate').value = today;
-});
-</script>
-
-/* ============================================================
-   CALIBRATION DES ZONES DE GRAPHIQUE
-   ============================================================
-   Ces valeurs sont exprimées en % de la largeur/hauteur de l'image.
-   Si l'extraction est imprécise, ajuste ces bornes selon tes captures.
-   ============================================================ */
-
-const HOMEWIZARD_CHART_BOUNDS = {
-  xStart: 0.05, xEnd: 0.95,   // zone horizontale du graphique (00h à 24h)
-  yTop: 0.08, yBottom: 0.75,  // zone verticale correspondant à l'échelle -4000/+2000
-  valueTop: 2000,             // valeur en haut de la zone (W)
-  valueBottom: -4000          // valeur en bas de la zone (W)
-};
-
-const SOLAREDGE_CHART_BOUNDS = {
-  xStart: 0.08, xEnd: 0.98,   // zone horizontale (6h à 20h environ, mappé sur 0-24h)
-  yTop: 0.15, yBottom: 0.92,  // zone verticale correspondant à l'échelle 0 à ~3.5kW
-  valueTop: 3.5,              // kW en haut (à ajuster selon "Pic d'aujourd'hui")
-  valueBottom: 0
-};
-
-// Couleurs cibles (tolérance RGB)
-const COLOR_PURPLE = { r: 155, g: 60, b: 200, tolerance: 45 };
-const COLOR_GREEN_HW = { r: 45, g: 200, b: 130, tolerance: 45 };
-const COLOR_GREEN_SE = { r: 40, g: 200, b: 110, tolerance: 45 };
-
-/* ============================================================
-   HELPERS COULEUR & CANVAS
-   ============================================================ */
-
-function colorMatch(r, g, b, target){
-  return Math.abs(r - target.r) < target.tolerance &&
-         Math.abs(g - target.g) < target.tolerance &&
-         Math.abs(b - target.b) < target.tolerance;
-}
-
-function loadImageToCanvas(file){
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        resolve({ canvas, ctx, width: img.width, height: img.height });
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-/* ============================================================
-   EXTRACTION COURBE HOMEWIZARD (Import/Export en W)
-   ============================================================ */
-
-async function extractHomeWizardCurve(canvasData){
-  const { ctx, width, height } = canvasData;
-  const bounds = HOMEWIZARD_CHART_BOUNDS;
-
-  const xPixelStart = Math.floor(width * bounds.xStart);
-  const xPixelEnd = Math.floor(width * bounds.xEnd);
-  const yPixelTop = Math.floor(height * bounds.yTop);
-  const yPixelBottom = Math.floor(height * bounds.yBottom);
-
-  const chartWidthPx = xPixelEnd - xPixelStart;
-  const chartHeightPx = yPixelBottom - yPixelTop;
-
-  // 24 points horaires (on moyenne sur la largeur de chaque "heure" de pixels)
-  let hourlyImportW = new Array(24).fill(0);
-  let hourlyExportW = new Array(24).fill(0);
-  let hourlySamples = new Array(24).fill(0);
-
-  const imageData = ctx.getImageData(xPixelStart, yPixelTop, chartWidthPx, chartHeightPx);
-  const data = imageData.data;
-
-  for(let x = 0; x < chartWidthPx; x++){
-    const hourIndex = Math.floor((x / chartWidthPx) * 24);
-    if(hourIndex < 0 || hourIndex >= 24) continue;
-
-    let purpleY = null;
-    let greenY = null;
-
-    for(let y = 0; y < chartHeightPx; y++){
-      const idx = (y * chartWidthPx + x) * 4;
-      const r = data[idx], g = data[idx+1], b = data[idx+2];
-
-      if(colorMatch(r, g, b, COLOR_PURPLE) && purpleY === null){
-        purpleY = y;
-      }
-      if(colorMatch(r, g, b, COLOR_GREEN_HW) && greenY === null){
-        greenY = y;
-      }
-    }
-
-    // Convertit position Y en valeur (W)
-    const yToValue = (yPos) => {
-      const ratio = yPos / chartHeightPx;
-      return bounds.valueTop + ratio * (bounds.valueBottom - bounds.valueTop);
-    };
-
-    if(purpleY !== null){
-      const val = yToValue(purpleY);
-      if(val > 0){ hourlyImportW[hourIndex] += val; hourlySamples[hourIndex]++; }
-    }
-    if(greenY !== null){
-      const val = yToValue(greenY);
-      if(val < 0){ hourlyExportW[hourIndex] += Math.abs(val); hourlySamples[hourIndex]++; }
-    }
-  }
-
-  // Moyenne + conversion W -> kWh (approx, puissance moyenne sur 1h)
-  let hourlyImportKWh = hourlyImportW.map((v, i) => hourlySamples[i] > 0 ? (v / Math.max(1,hourlySamples[i])) / 1000 : 0);
-  let hourlyExportKWh = hourlyExportW.map((v, i) => hourlySamples[i] > 0 ? (v / Math.max(1,hourlySamples[i])) / 1000 : 0);
-
-  return { hourlyImportKWh, hourlyExportKWh };
-}
-
-/* ============================================================
-   EXTRACTION COURBE SOLAREDGE (Production en kW)
-   ============================================================ */
-
-async function extractSolarEdgeCurve(canvasData){
-  const { ctx, width, height } = canvasData;
-  const bounds = SOLAREDGE_CHART_BOUNDS;
-
-  const xPixelStart = Math.floor(width * bounds.xStart);
-  const xPixelEnd = Math.floor(width * bounds.xEnd);
-  const yPixelTop = Math.floor(height * bounds.yTop);
-  const yPixelBottom = Math.floor(height * bounds.yBottom);
-
-  const chartWidthPx = xPixelEnd - xPixelStart;
-  const chartHeightPx = yPixelBottom - yPixelTop;
-
-  let hourlyProductionKW = new Array(24).fill(0);
-  let hourlySamples = new Array(24).fill(0);
-
-  const imageData = ctx.getImageData(xPixelStart, yPixelTop, chartWidthPx, chartHeightPx);
-  const data = imageData.data;
-
-  for(let x = 0; x < chartWidthPx; x++){
-    // SolarEdge affiche généralement de 6h à 20h -> on mappe sur toute la plage 24h
-    const hourIndex = Math.floor((x / chartWidthPx) * 24);
-    if(hourIndex < 0 || hourIndex >= 24) continue;
-
-    let greenTopY = null;
-
-    for(let y = 0; y < chartHeightPx; y++){
-      const idx = (y * chartWidthPx + x) * 4;
-      const r = data[idx], g = data[idx+1], b = data[idx+2];
-      if(colorMatch(r, g, b, COLOR_GREEN_SE)){
-        greenTopY = y; // premier pixel vert rencontré = sommet de la courbe
-        break;
-      }
-    }
-
-    if(greenTopY !== null){
-      const ratio = greenTopY / chartHeightPx;
-      const value = bounds.valueTop - ratio * (bounds.valueTop - bounds.valueBottom);
-      hourlyProductionKW[hourIndex] += Math.max(0, value);
-      hourlySamples[hourIndex]++;
-    }
-  }
-
-  let hourlyProductionKWh = hourlyProductionKW.map((v, i) => hourlySamples[i] > 0 ? v / hourlySamples[i] : 0);
-  return { hourlyProductionKWh };
-}
-
-/* ============================================================
-   OCR — EXTRACTION TEXTE (Grid/Surplus/Production/Date)
-   ============================================================ */
-
-async function runOCR(file){
-  const result = await Tesseract.recognize(file, 'eng+fra');
-  return result.data.text;
-}
-
-function extractHomeWizardValues(text){
-  // Grid apparaît toujours avant Surplus dans le layout HomeWizard
-  const numbers = text.match(/(\d+[.,]\d+)\s*kWh/gi) || [];
-  const cleanNumbers = numbers.map(n => parseFloat(n.replace(',', '.').replace(/kWh/i,'').trim()));
-
-  let grid = null, surplus = null;
-
-  const gridIdx = text.search(/Grid/i);
-  const surplusIdx = text.search(/Surplus/i);
-
-  const gridMatch = text.match(/Grid[\s\S]{0,15}?(\d+[.,]\d+)/i);
-  const surplusMatch = text.match(/Surplus[\s\S]{0,15}?(\d+[.,]\d+)/i);
-
-  if(gridMatch) grid = parseFloat(gridMatch[1].replace(',', '.'));
-  if(surplusMatch) surplus = parseFloat(surplusMatch[1].replace(',', '.'));
-
-  // Sécurité : si Grid == Surplus (bug détecté précédemment), on retente avec position brute
-  if(grid !== null && surplus !== null && grid === surplus && cleanNumbers.length >= 2){
-    grid = cleanNumbers[0];
-    surplus = cleanNumbers[1];
-  }
-
-  return { grid, surplus };
-}
-
-function extractSolarEdgeProduction(text){
-  const match = text.match(/Production[\s\S]{0,20}?(\d+[.,]\d+)\s*kWh/i);
-  if(match) return parseFloat(match[1].replace(',', '.'));
-  // Fallback : cherche juste un nombre suivi de kWh
-  const fallback = text.match(/(\d+[.,]\d+)\s*kWh/i);
-  return fallback ? parseFloat(fallback[1].replace(',', '.')) : null;
-}
-
-function extractDateFromText(text){
-  const today = new Date();
-
-  if(/yesterday/i.test(text)){
-    const d = new Date(today);
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().split('T')[0];
-  }
-
-  // Format anglais "Fri 31 Jul"
-  const monthsEn = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
-  const enMatch = text.match(/(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i);
-  if(enMatch){
-    const day = parseInt(enMatch[1]);
-    const month = monthsEn[enMatch[2].toLowerCase()];
-    const year = today.getFullYear();
-    return new Date(year, month, day).toISOString().split('T')[0];
-  }
-
-  // Format français "ven. 31/07/2026"
-  const frMatch = text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-  if(frMatch){
-    const day = parseInt(frMatch[1]);
-    const month = parseInt(frMatch[2]) - 1;
-    let year = parseInt(frMatch[3]);
-    if(year < 100) year += 2000;
-    return new Date(year, month, day).toISOString().split('T')[0];
-  }
-
-  return today.toISOString().split('T')[0];
-}
-
-/* ============================================================
-   HANDLERS UI — UPLOAD IMAGES
-   ============================================================ */
-
-window.lastP1Curve = null;
-window.lastPVCurve = null;
-
-async function handleP1Image(event){
-  const file = event.target.files[0];
-  if(!file) return;
-
-  document.getElementById('p1Status').textContent = "Analyse OCR + extraction courbe en cours...";
-
-  try {
-    const text = await runOCR(file);
-    const { grid, surplus } = extractHomeWizardValues(text);
-    const date = extractDateFromText(text);
-
-    if(grid !== null) document.getElementById('p1Grid').value = grid;
-    if(surplus !== null) document.getElementById('p1Surplus').value = surplus;
-    document.getElementById('p1Date').value = date;
-
-    const canvasData = await loadImageToCanvas(file);
-    const curve = await extractHomeWizardCurve(canvasData);
-    window.lastP1Curve = curve;
-
-    document.getElementById('p1Status').innerHTML =
-      `<span style="color:var(--accent)">✓ OCR terminé — Grid: ${grid ?? '?'} kWh, Surplus: ${surplus ?? '?'} kWh, Date: ${date}</span><br>
-       <span style="color:var(--muted)">Courbe extraite — vérifie les valeurs avant d'ajouter.</span>`;
-
-    // Lance la détection d'équipements (voir message 3)
-    if(typeof detectAppliancesFromCurve === 'function'){
-      detectAppliancesFromCurve(curve);
-    }
-
-  } catch(e){
-    document.getElementById('p1Status').innerHTML = `<span style="color:var(--danger)">Erreur : ${e.message}. Saisie manuelle requise.</span>`;
-  }
-}
-
-async function handlePVImage(event){
-  const file = event.target.files[0];
-  if(!file) return;
-
-  document.getElementById('pvStatus').textContent = "Analyse OCR + extraction courbe en cours...";
-
-  try {
-    const text = await runOCR(file);
-    const production = extractSolarEdgeProduction(text);
-    const date = extractDateFromText(text);
-
-    if(production !== null) document.getElementById('pvTotal').value = production;
-    document.getElementById('pvDate').value = date;
-
-    const canvasData = await loadImageToCanvas(file);
-    const curve = await extractSolarEdgeCurve(canvasData);
-    window.lastPVCurve = curve;
-
-    // Recalibre la courbe pour que la somme corresponde exactement au total OCR
-    if(production !== null){
-      const sumExtracted = curve.hourlyProductionKWh.reduce((a,b)=>a+b, 0);
-      if(sumExtracted > 0){
-        const factor = production / sumExtracted;
-        curve.hourlyProductionKWh = curve.hourlyProductionKWh.map(v => v * factor);
-      }
-    }
-
-    document.getElementById('pvStatus').innerHTML =
-      `<span style="color:var(--accent)">✓ OCR terminé — Production: ${production ?? '?'} kWh, Date: ${date}</span><br>
-       <span style="color:var(--muted)">Courbe extraite et calibrée sur le total.</span>`;
-
-  } catch(e){
-    document.getElementById('pvStatus').innerHTML = `<span style="color:var(--danger)">Erreur : ${e.message}. Saisie manuelle requise.</span>`;
-  }
-}
-
-/* ============================================================
-   AJOUT DES ENTRÉES (P1 + PV combinés)
-   ============================================================ */
-
-function addP1Entry(){
-  const date = document.getElementById('p1Date').value;
-  const grid = parseFloat(document.getElementById('p1Grid').value);
-  const surplus = parseFloat(document.getElementById('p1Surplus').value);
-  const pvTotal = parseFloat(document.getElementById('pvTotal').value) || null;
-
-  if(!date || isNaN(grid) || isNaN(surplus)){
-    alert("Merci de compléter date, Grid et Surplus.");
-    return;
-  }
-
-  const entry = {
-    date, grid, surplus,
-    pvProduction: pvTotal,
-    hourlyImport: window.lastP1Curve ? window.lastP1Curve.hourlyImportKWh : null,
-    hourlyExport: window.lastP1Curve ? window.lastP1Curve.hourlyExportKWh : null,
-    hourlyProduction: window.lastPVCurve ? window.lastPVCurve.hourlyProductionKWh : null
-  };
-
-  currentProfile.p1Entries.push(entry);
-  refreshP1Table();
-
-  document.getElementById('p1Grid').value = '';
-  document.getElementById('p1Surplus').value = '';
-  document.getElementById('pvTotal').value = '';
-  window.lastP1Curve = null;
-  window.lastPVCurve = null;
-  document.getElementById('p1AppliancessDetected').style.display = 'none';
-}
-
-function addPVEntry(){
-  // Permet d'ajouter la production séparément si elle est importée après le P1
-  const date = document.getElementById('pvDate').value;
-  const pvTotal = parseFloat(document.getElementById('pvTotal').value);
-  if(!date || isNaN(pvTotal)){
-    alert("Merci de compléter date et production.");
-    return;
-  }
-  // Cherche une entrée P1 existante à cette date pour fusionner
-  const existing = currentProfile.p1Entries.find(e => e.date === date);
-  if(existing){
-    existing.pvProduction = pvTotal;
-    existing.hourlyProduction = window.lastPVCurve ? window.lastPVCurve.hourlyProductionKWh : existing.hourlyProduction;
-    alert("Production fusionnée avec le relevé P1 existant du " + date);
-  } else {
-    currentProfile.p1Entries.push({
-      date, grid: 0, surplus: 0, pvProduction: pvTotal,
-      hourlyImport: null, hourlyExport: null,
-      hourlyProduction: window.lastPVCurve ? window.lastPVCurve.hourlyProductionKWh : null
-    });
-    alert("Production ajoutée comme nouvelle entrée (pas de P1 correspondant trouvé).");
-  }
-  refreshP1Table();
-  document.getElementById('pvTotal').value = '';
-  window.lastPVCurve = null;
-}
-
-function refreshP1Table(){
-  const tbody = document.querySelector('#p1Table tbody');
-  tbody.innerHTML = '';
-  currentProfile.p1Entries.forEach((entry, idx) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${entry.date}</td><td>${entry.grid}</td><td>${entry.surplus}</td>
-      <td>${entry.pvProduction !== null && entry.pvProduction !== undefined ? entry.pvProduction + ' kWh' : '—'}</td>
-      <td><button class="btn danger" style="padding:4px 10px;margin:0;" onclick="removeP1Entry(${idx})">✕</button></td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function removeP1Entry(idx){
-  currentProfile.p1Entries.splice(idx, 1);
-  refreshP1Table();
-}
-
-      /* ============================================================
-   SIGNATURES D'ÉQUIPEMENTS — Pattern Recognition
-   ============================================================ */
-
-const APPLIANCE_SIGNATURES = {
-  washingMachine: {
-    name: "Machine à laver",
-    powerRange: [1800, 2500],
-    durationRange: [60, 150],
-    pattern: "plateau_simple",
-    description: "Plateau élevé constant (chauffage eau) + oscillations (essorage)"
-  },
-  dishwasher: {
-    name: "Lave-vaisselle",
-    powerRange: [1500, 2200],
-    durationRange: [90, 200],
-    pattern: "double_pic",
-    description: "Pic début (chauffage) → creux → pic fin (séchage)"
-  },
-  dryer: {
-    name: "Sèche-linge",
-    powerRange: [2000, 2800],
-    durationRange: [50, 120],
-    pattern: "plateau_debut",
-    description: "Plateau élevé en début, puis décroissance progressive"
-  },
-  oven: {
-    name: "Four électrique",
-    powerRange: [2000, 3200],
-    durationRange: [20, 100],
-    pattern: "oscillant",
-    description: "Plateau avec oscillations régulières (thermostat)"
-  },
-  microwave: {
-    name: "Micro-ondes",
-    powerRange: [800, 1200],
-    durationRange: [2, 20],
-    pattern: "pic_court",
-    description: "Pic court et net"
-  }
-};
-
-/* ============================================================
-   DÉTECTION DE PICS & PATTERNS
-   ============================================================ */
-
-function detectPeaksInCurve(hourlyConsumptionKW, threshold = 0.5){
-  const peaks = [];
-  let inPeak = false;
-  let peakStart = null;
-  let peakMax = 0;
-  let peakValues = [];
-
-  for(let h = 0; h < hourlyConsumptionKW.length; h++){
-    const val = hourlyConsumptionKW[h];
-
-    if(val >= threshold && !inPeak){
-      inPeak = true;
-      peakStart = h;
-      peakMax = val;
-      peakValues = [val];
-    } else if(val >= threshold && inPeak){
-      peakMax = Math.max(peakMax, val);
-      peakValues.push(val);
-    } else if(val < threshold && inPeak){
-      inPeak = false;
-      const duration = h - peakStart;
-      if(duration >= 0.5){ // au moins 30 min
-        peaks.push({
-          startHour: peakStart,
-          endHour: h,
-          durationMin: duration * 60,
-          maxPower: peakMax,
-          avgPower: peakValues.reduce((a,b)=>a+b,0) / peakValues.length,
-          values: peakValues,
-          pattern: analyzePattern(peakValues)
-        });
-      }
-      peakValues = [];
-    }
-  }
-
-  if(inPeak){
-    const duration = hourlyConsumptionKW.length - peakStart;
-    peaks.push({
-      startHour: peakStart,
-      endHour: hourlyConsumptionKW.length,
-      durationMin: duration * 60,
-      maxPower: peakMax,
-      avgPower: peakValues.reduce((a,b)=>a+b,0) / peakValues.length,
-      values: peakValues,
-      pattern: analyzePattern(peakValues)
-    });
-  }
-
-  return peaks;
-}
-
-function analyzePattern(values){
-  if(values.length < 2) return "unknown";
-
-  const variance = values.reduce((s, v, i, a) => {
-    const avg = a.reduce((x,y)=>x+y,0)/a.length;
-    return s + Math.pow(v - avg, 2);
-  }, 0) / values.length;
-
-  const stdDev = Math.sqrt(variance);
-  const avgVal = values.reduce((a,b)=>a+b,0) / values.length;
-  const coef = stdDev / avgVal;
-
-  const firstVal = values[0];
-  const lastVal = values[values.length - 1];
-
-  if(coef > 0.3){
-    return "oscillant"; // Variations importantes (four, clim)
-  } else if(firstVal < lastVal * 0.7){
-    return "plateau_debut"; // Débute haut, décroît (sèche-linge)
-  } else if(lastVal > firstVal * 1.2){
-    return "double_pic"; // Bas au milieu, pics aux extrémités (lave-vaisselle)
-  } else {
-    return "plateau_simple"; // Plateau constant (machine à laver)
-  }
-}
-
-function matchAppliance(peak){
-  const candidates = [];
-
-  Object.entries(APPLIANCE_SIGNATURES).forEach(([key, sig]) => {
-    const powerMatch = peak.maxPower >= sig.powerRange[0] && peak.maxPower <= sig.powerRange[1];
-    const durationMatch = peak.durationMin >= sig.durationRange[0] && peak.durationMin <= sig.durationRange[1];
-    const patternMatch = peak.pattern === sig.pattern;
-
-    let score = 0;
-    if(powerMatch) score += 40;
-    if(durationMatch) score += 40;
-    if(patternMatch) score += 20;
-
-    if(score > 0){
-      candidates.push({
-        key, name: sig.name, score, confidence: score / 100,
-        description: sig.description
-      });
-    }
-  });
-
-  candidates.sort((a, b) => b.score - a.score);
-  return candidates;
-}
-
-/* ============================================================
-   RECONSTRUCTION DE COURBE CONSOMMATION DEPUIS P1
-   ============================================================ */
-
-function reconstructConsumptionFromP1(entry){
-  // Consommation = Production - Injection + Import
-  let hourlyConsumption = new Array(24).fill(0);
-
-  if(entry.hourlyProduction && entry.hourlyImport && entry.hourlyExport){
-    for(let h = 0; h < 24; h++){
-      const prod = entry.hourlyProduction[h] || 0;
-      const imp = entry.hourlyImport[h] || 0;
-      const exp = entry.hourlyExport[h] || 0;
-      hourlyConsumption[h] = prod - exp + imp;
-    }
-  } else {
-    // Fallback : profil théorique calibré sur totaux P1
-    const shape = baseLoadShape();
-    const sumShape = shape.reduce((a,b)=>a+b,0);
-    const estimatedTotal = entry.grid + Math.max(0, (entry.pvProduction || 0) - entry.surplus);
-    hourlyConsumption = shape.map(v => (v / sumShape) * Math.max(estimatedTotal, 1));
-  }
-
-  return hourlyConsumption;
-}
-
-function baseLoadShape(){
-  return [0.3, 0.25, 0.2, 0.2, 0.2, 0.25, 0.4, 0.6, 0.5, 0.4, 0.4, 0.4, 0.45, 0.4, 0.4, 0.4, 0.45, 0.6, 0.9, 1.0, 0.9, 0.7, 0.5, 0.35];
-}
-
-/* ============================================================
-   DÉTECTION D'ÉQUIPEMENTS (Main Function)
-   ============================================================ */
-
-function detectAppliancesFromCurve(p1Curve){
-  if(!p1Curve.hourlyImportKWh && !p1Curve.hourlyExportKWh){
-    return;
-  }
-
-  // Reconstruit la courbe de consommation (import = positive)
-  let hourlyConsumption = new Array(24).fill(0);
-  for(let h = 0; h < 24; h++){
-    hourlyConsumption[h] = (p1Curve.hourlyImportKWh[h] || 0);
-  }
-
-  const peaks = detectPeaksInCurve(hourlyConsumption, 0.4);
-  const detections = peaks.map(peak => {
-    const candidates = matchAppliance(peak);
-    return { peak, candidates: candidates.slice(0, 3) };
-  });
-
-  displayDetections(detections);
-}
-
-/* ============================================================
-   INTERFACE DE VALIDATION — AFFICHAGE DÉTECTIONS
-   ============================================================ */
-
-window.detectedAppliances = [];
-
-function displayDetections(detections){
-  const container = document.getElementById('p1DetectionsList');
-  container.innerHTML = '';
-  window.detectedAppliances = [];
-
-  detections.forEach((det, idx) => {
-    const peak = det.peak;
-    const candidates = det.candidates;
-
-    const item = document.createElement('div');
-    item.className = 'detection-item';
-
-    let html = `<div class="info">
-      <strong>${Math.floor(peak.startHour)}h${Math.floor((peak.startHour%1)*60)}-${Math.floor(peak.endHour)}h${Math.floor((peak.endHour%1)*60)}</strong> 
-      — Pic ${peak.maxPower.toFixed(2)} kW, durée ${peak.durationMin.toFixed(0)}min<br>
-      <span style="color:var(--muted); font-size:0.8rem;">Pattern: ${peak.pattern}</span><br>`;
-
-    if(candidates.length > 0){
-      html += `<span style="color:var(--accent2);">Suggestions :</span> `;
-      candidates.forEach((cand, cidx) => {
-        html += `<span style="background:var(--border); padding:2px 6px; border-radius:4px; margin-right:4px; font-size:0.75rem;">
-          ${cand.name} (${Math.round(cand.confidence*100)}%)
-        </span>`;
-      });
-    } else {
-      html += `<span style="color:var(--muted); font-size:0.8rem;">Pas de correspondance trouvée</span>`;
-    }
-
-    html += `</div><div class="actions">`;
-
-    if(candidates.length > 0){
-      html += `<button class="btn secondary" onclick="confirmAppliance(${idx}, '${candidates[0].name}')">✓ Confirmer</button>`;
-    }
-
-    html += `<button class="btn secondary" onclick="ignoreDetection(${idx})">Ignorer</button>`;
-    html += `</div>`;
-
-    item.innerHTML = html;
-    container.appendChild(item);
-
-    window.detectedAppliances.push({
-      idx, peak, candidates, confirmed: false
+  
+  // Tab navigation
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      if(btn.dataset.tab === 'simulation') refreshSimulationSelects();
     });
   });
-
-  if(detections.length > 0){
-    document.getElementById('p1AppliancessDetected').style.display = 'block';
-  }
-}
-
-function confirmAppliance(idx, applianceName){
-  const det = window.detectedAppliances.find(d => d.idx === idx);
-  if(det){
-    det.confirmed = applianceName;
-    console.log(`Confirmé : ${applianceName} à ${det.peak.startHour}h`);
-  }
-}
-
-function ignoreDetection(idx){
-  window.detectedAppliances = window.detectedAppliances.filter(d => d.idx !== idx);
-  displayDetections(window.detectedAppliances.map(d => ({ peak: d.peak, candidates: d.candidates })));
-}
-
-/* ============================================================
-   INTÉGRATION DANS LA SIMULATION
-   ============================================================ */
-
-function refreshSimulationSelects(){
-  const p1Sel = document.getElementById('simP1Select');
-  p1Sel.innerHTML = '';
-  currentProfile.p1Entries.forEach((e, idx) => {
-    const opt = document.createElement('option');
-    const pvInfo = e.pvProduction ? ` + PV: ${e.pvProduction}kWh` : '';
-    opt.value = idx;
-    opt.textContent = `${e.date} — Grid: ${e.grid}kWh / Surplus: ${e.surplus}kWh${pvInfo}`;
-    p1Sel.appendChild(opt);
-  });
-
-  const battSel = document.getElementById('simBattSelect');
-  battSel.innerHTML = '';
-  currentProfile.batteryOffers.forEach((b, idx) => {
-    const opt = document.createElement('option');
-    opt.value = idx;
-    opt.textContent = `${b.name} (${b.capacity}kWh - ${b.cost}€)`;
-    battSel.appendChild(opt);
-  });
-}
-
-/* ============================================================
-   MODÈLE SOLAIRE (Conservation v1.0)
-   ============================================================ */
-
-const MONTHLY_KWH_PER_KWC = [25, 45, 80, 110, 130, 135, 130, 115, 90, 60, 30, 20];
-
-function orientationTiltFactor(tilt, azimuth){
-  const azimuthDiff = Math.min(Math.abs(azimuth - 180), 360 - Math.abs(azimuth - 180));
-  const tiltDiff = Math.abs(tilt - 35);
-  let factor = 1 - (azimuthDiff/180)*0.35 - (tiltDiff/90)*0.15;
-  return Math.max(0.5, Math.min(1.05, factor));
-}
-
-function dailyProductionForGroup(group, monthIndex){
-  const monthlyBase = MONTHLY_KWH_PER_KWC[monthIndex];
-  const kWc = (group.panelPower * group.panelCount) / 1000;
-  const factor = orientationTiltFactor(group.tilt, group.azimuth);
-  const monthlyProd = monthlyBase * kWc * factor;
-  const daysInMonth = new Date(2026, monthIndex+1, 0).getDate();
-  return monthlyProd / daysInMonth;
-}
-
-function totalDailyProduction(pvGroups, monthIndex){
-  return pvGroups.reduce((sum, g) => sum + dailyProductionForGroup(g, monthIndex), 0);
-}
-
-function hourlyProductionCurve(dailyTotalKWh, avgAzimuth, monthIndex){
-  const daylightByMonth = [8, 9, 10, 10.5, 11, 11.5, 11.5, 11, 10, 9, 8, 7.5];
-  const daylightLength = daylightByMonth[monthIndex];
-  const azimuthShift = (avgAzimuth - 180) / 180 * 1.5;
-  const peakHour = 13 + azimuthShift;
-  const start = peakHour - daylightLength/2;
-  const end = peakHour + daylightLength/2;
-
-  let weights = [];
-  for(let h = 0; h < 24; h++){
-    if(h >= start && h <= end){
-      const x = (h - peakHour) / (daylightLength/2);
-      weights.push(Math.max(0, Math.cos(x * Math.PI/2)));
-    } else {
-      weights.push(0);
-    }
-  }
-  const sumW = weights.reduce((a,b) => a+b, 0);
-  return weights.map(w => sumW > 0 ? dailyTotalKWh * w / sumW : 0);
-}
-
-/* ============================================================
-   SIMULATION BATTERIE (avec données réelles si disponibles)
-   ============================================================ */
-
-function simulateDayWithBattery(productionCurve, consumptionCurve, battery){
-  let soc = battery.capacity * 0.2;
-  const maxSoc = battery.capacity;
-  const minSoc = battery.capacity * 0.1;
-  const chargeRate = battery.power;
-  const efficiency = battery.efficiency || 0.9;
-
-  let gridImport = 0, gridExport = 0;
-  let socHistory = [];
-  let hourly = [];
-
-  for(let h = 0; h < 24; h++){
-    const prod = productionCurve[h];
-    const cons = consumptionCurve[h];
-    let net = prod - cons;
-    let batteryFlow = 0;
-    let hImport = 0, hExport = 0;
-
-    if(net > 0){
-      const room = (maxSoc - soc) / efficiency;
-      const charge = Math.min(chargeRate, net, room);
-      batteryFlow = charge;
-      soc += charge * efficiency;
-      hExport = net - charge;
-      gridExport += hExport;
-    } else {
-      const deficit = -net;
-      const available = soc - minSoc;
-      const discharge = Math.min(chargeRate, deficit, Math.max(0, available));
-      batteryFlow = -discharge;
-      soc -= discharge;
-      hImport = deficit - discharge;
-      gridImport += hImport;
-    }
-    socHistory.push(soc);
-    hourly.push({ hour: h, production: prod, consumption: cons, batteryFlow, gridImport: hImport, gridExport: hExport });
-  }
-  return { gridImport, gridExport, socHistory, hourly };
-}
-
-function simulateDayWithoutBattery(productionCurve, consumptionCurve){
-  let gridImport = 0, gridExport = 0;
-  for(let h = 0; h < 24; h++){
-    const net = productionCurve[h] - consumptionCurve[h];
-    if(net > 0) gridExport += net; else gridImport += -net;
-  }
-  return { gridImport, gridExport };
-}
-
-/* ============================================================
-   RUNNER SIMULATION
-   ============================================================ */
-
-function runSimulationForEntry(entryIdx, battIdx){
-  syncFormToProfile();
-  const entry = currentProfile.p1Entries[entryIdx];
-  const battery = currentProfile.batteryOffers[battIdx];
-  if(!entry || !battery){
-    alert("Merci de sélectionner un relevé P1 et une offre batterie.");
-    return null;
-  }
-
-  const monthIndex = getMonthIndexFromDate(entry.date);
-
-  // Priorité 1 : utilise la production PV réelle si disponible
-  let productionCurve;
-  if(entry.hourlyProduction && entry.hourlyProduction.some(v => v > 0)){
-    productionCurve = entry.hourlyProduction;
-  } else {
-    // Fallback : calcule depuis le modèle théorique
-    const avgAzimuth = currentProfile.pvGroups.reduce((s,g)=>s+g.azimuth,0) / (currentProfile.pvGroups.length || 1);
-    const dailyProd = totalDailyProduction(currentProfile.pvGroups, monthIndex);
-    productionCurve = hourlyProductionCurve(dailyProd, avgAzimuth, monthIndex);
-  }
-
-  // Reconstruction de la consommation
-  let consumptionCurve = reconstructConsumptionFromP1(entry);
-
-  // Simulations
-  const without = simulateDayWithoutBattery(productionCurve, consumptionCurve);
-  const withBatt = simulateDayWithBattery(productionCurve, consumptionCurve, battery);
-
-  // ROI
-  const tariff = currentProfile.tariff;
-  const costWithout = computeDailyCost(without.gridImport, without.gridExport, tariff);
-  const costWith = computeDailyCost(withBatt.gridImport, withBatt.gridExport, tariff);
-  const dailySavings = costWithout - costWith;
-  const annualSavings = dailySavings * 365;
-  const payback = annualSavings > 0 ? battery.cost / annualSavings : Infinity;
-
-  return { entry, battery, productionCurve, consumptionCurve, without, withBatt, dailySavings, annualSavings, payback };
-}
-
-function getMonthIndexFromDate(dateStr){
-  return new Date(dateStr).getMonth();
-}
-
-function computeDailyCost(gridImport, gridExport, tariff){
-  const cost = gridImport * tariff.consumption;
-  const revenue = gridExport * tariff.injection;
-  return cost - revenue;
-}
-
-function runSimulation(){
-  const entryIdx = parseInt(document.getElementById('simP1Select').value);
-  const battIdx = parseInt(document.getElementById('simBattSelect').value);
-  const res = runSimulationForEntry(entryIdx, battIdx);
-  if(!res) return;
-
-  document.getElementById('simResults').style.display = 'block';
-  document.getElementById('comparisonResults').style.display = 'none';
-
-  document.getElementById('resGridWithout').textContent = res.without.gridImport.toFixed(1);
-  document.getElementById('resGridWith').textContent = res.withBatt.gridImport.toFixed(1);
-  document.getElementById('resDailySavings').textContent = res.dailySavings.toFixed(2) + ' €';
-  document.getElementById('resAnnualSavings').textContent = res.annualSavings.toFixed(0) + ' €';
-  document.getElementById('resPayback').textContent = isFinite(res.payback) ? res.payback.toFixed(1) + ' ans' : 'N/A';
-
-  renderDayChart(res);
-  renderSocChart(res);
-}
-
-function runAllBatteriesComparison(){
-  const entryIdx = parseInt(document.getElementById('simP1Select').value);
-  if(isNaN(entryIdx) || currentProfile.p1Entries.length === 0){
-    alert("Merci de sélectionner un relevé P1.");
-    return;
-  }
-  if(currentProfile.batteryOffers.length === 0){
-    alert("Aucune offre batterie enregistrée.");
-    return;
-  }
-
-  document.getElementById('simResults').style.display = 'none';
-  document.getElementById('comparisonResults').style.display = 'block';
-
-  const tbody = document.querySelector('#comparisonTable tbody');
-  tbody.innerHTML = '';
-
-  currentProfile.batteryOffers.forEach((battery, idx) => {
-    const res = runSimulationForEntry(entryIdx, idx);
-    if(!res) return;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${battery.name}</td>
-      <td>${battery.capacity} kWh</td>
-      <td>${battery.cost} €</td>
-      <td>${res.annualSavings.toFixed(0)} €</td>
-      <td>${isFinite(res.payback) ? res.payback.toFixed(1) + ' ans' : 'N/A'}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-/* ============================================================
-   CHARTS
-   ============================================================ */
-
-function renderDayChart(res){
-  const ctx = document.getElementById('chartDay').getContext('2d');
-  if(chartDayInstance) chartDayInstance.destroy();
-  const hours = Array.from({length:24}, (_,h) => h + 'h');
-  chartDayInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: hours,
-      datasets: [
-        {
-          label: 'Production PV (kWh)',
-          data: res.productionCurve,
-          borderColor: '#fbbf24',
-          backgroundColor: 'rgba(251,191,36,0.15)',
-          fill: true,
-          tension: 0.3
-        },
-        {
-          label: 'Consommation (kWh)',
-          data: res.consumptionCurve,
-          borderColor: '#f87171',
-          backgroundColor: 'rgba(248,113,113,0.1)',
-          fill: true,
-          tension: 0.3
-        },
-        {
-          label: 'Import réseau AVEC batterie (kWh)',
-          data: res.withBatt.hourly.map(h => h.gridImport),
-          borderColor: '#60a5fa',
-          backgroundColor: 'rgba(96,165,250,0.15)',
-          fill: true,
-          tension: 0.3
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { labels: { color: '#e5e7eb' } }
-      },
-      scales: {
-        x: { ticks: { color: '#9ca3af' }, grid: { color: '#2d3142' } },
-        y: { ticks: { color: '#9ca3af' }, grid: { color: '#2d3142' } }
-      }
-    }
-  });
-}
-
-function renderSocChart(res){
-  const ctx = document.getElementById('chartSoc').getContext('2d');
-  if(chartSocInstance) chartSocInstance.destroy();
-  const hours = Array.from({length:24}, (_,h) => h + 'h');
-  chartSocInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: hours,
-      datasets: [{
-        label: 'État de charge batterie (kWh)',
-        data: res.withBatt.socHistory,
-        borderColor: '#4ade80',
-        backgroundColor: 'rgba(74,222,128,0.15)',
-        fill: true,
-        tension: 0.3
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { labels: { color: '#e5e7eb' } }
-      },
-      scales: {
-        x: { ticks: { color: '#9ca3af' }, grid: { color: '#2d3142' } },
-        y: {
-          ticks: { color: '#9ca3af' },
-          grid: { color: '#2d3142' },
-          min: 0,
-          max: currentProfile.batteryOffers[document.getElementById('simBattSelect').value]?.capacity || 10
-        }
-      }
-    }
-  });
-}
-
-/* ============================================================
-   PDF EXPORT
-   ============================================================ */
-
-function exportPDF(){
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  doc.setFontSize(16);
-  doc.text("Rapport Simulation Batterie Domestique v1.1", 20, 20);
-  doc.setFontSize(10);
-  doc.text("Profil: " + (currentProfile.name || "Sans nom"), 20, 30);
-  doc.text("Date d'export: " + new Date().toLocaleDateString('fr-BE'), 20, 36);
-
-  let y = 50;
-  doc.setFontSize(12);
-  doc.text("Résultats de la simulation en cours:", 20, y);
-  y += 10;
-
-  doc.setFontSize(10);
-  const results = [
-    ["Import réseau sans batterie", document.getElementById('resGridWithout').textContent + " kWh"],
-    ["Import réseau avec batterie", document.getElementById('resGridWith').textContent + " kWh"],
-    ["Économie journalière", document.getElementById('resDailySavings').textContent],
-    ["Économie annuelle estimée", document.getElementById('resAnnualSavings').textContent],
-    ["Retour sur investissement", document.getElementById('resPayback').textContent]
-  ];
-
-  results.forEach(([label, value]) => {
-    doc.text(label + ": " + value, 20, y);
-    y += 8;
-  });
-
-  y += 10;
-  if(chartDayInstance){
-    const imgData = document.getElementById('chartDay').toDataURL('image/png');
-    doc.text("Courbe journalière:", 20, y);
-    y += 5;
-    doc.addImage(imgData, 'PNG', 20, y, 170, 80);
-    y += 90;
-  }
-
-  if(y > 240 && chartSocInstance){
-    doc.addPage();
-    y = 20;
-  }
-
-  if(chartSocInstance){
-    const imgData2 = document.getElementById('chartSoc').toDataURL('image/png');
-    doc.text("État de charge batterie:", 20, y);
-    y += 5;
-    doc.addImage(imgData2, 'PNG', 20, y, 170, 80);
-  }
-
-  doc.save('rapport_batterie_' + (currentProfile.name || 'simulation') + '.pdf');
-}
-
-/* ============================================================
-   INIT
-   ============================================================ */
-
-window.addEventListener('DOMContentLoaded', () => {
-  refreshProfileSelect();
-  syncProfileToForm();
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('p1Date').value = today;
-  document.getElementById('pvDate').value = today;
 });
 </script>
 
 </body>
 </html>
-
