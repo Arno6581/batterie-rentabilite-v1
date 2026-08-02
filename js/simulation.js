@@ -47,21 +47,27 @@ function hourlyProductionCurve(dailyTotalKWh, avgAzimuth, monthIndex){
 }
 
 // ============================================================
-// RECONSTRUCT CONSUMPTION FROM P1
+// RECONSTRUCT CONSUMPTION FROM P1 - WITH ROBUST FALLBACK
 // ============================================================
 
 function reconstructConsumptionFromP1(entry){
   let hourlyConsumption = new Array(24).fill(0);
 
-  if(entry.hourlyProduction && entry.hourlyImport && entry.hourlyExport){
+  // Vérification de la validité de la courbe d'importation réelle
+  const hasRealImport = entry.hourlyImport && entry.hourlyImport.reduce((a, b) => a + b, 0) > 0.05;
+  const hasRealExport = entry.hourlyExport && entry.hourlyExport.reduce((a, b) => a + b, 0) > 0.05;
+  const hasRealProd = entry.hourlyProduction && entry.hourlyProduction.reduce((a, b) => a + b, 0) > 0.05;
+
+  if(hasRealImport && hasRealExport && hasRealProd){
+    // Cas idéal : nous avons les 3 courbes brutes réelles extraites des images
     for(let h = 0; h < 24; h++){
       const prod = entry.hourlyProduction[h] || 0;
       const imp = entry.hourlyImport[h] || 0;
       const exp = entry.hourlyExport[h] || 0;
-      hourlyConsumption[h] = prod - exp + imp;
+      hourlyConsumption[h] = Math.max(0, prod - exp + imp);
     }
   } else {
-    // Fallback: profil théorique calibré sur totaux P1
+    // Cas de secours : calibration du modèle théorique à partir des totaux entrés à la main
     const shape = baseLoadShape();
     const sumShape = shape.reduce((a, b) => a + b, 0);
     const estimatedTotal = entry.grid + Math.max(0, (entry.pvProduction || 0) - entry.surplus);
@@ -76,9 +82,9 @@ function reconstructConsumptionFromP1(entry){
 // ============================================================
 
 function simulateDayWithBattery(productionCurve, consumptionCurve, battery){
-  let soc = battery.capacity * 0.2; // Commence à 20%
+  let soc = battery.capacity * 0.2; // Remplissage initial à 20%
   const maxSoc = battery.capacity;
-  const minSoc = battery.capacity * 0.1; // Seuil minimum 10%
+  const minSoc = battery.capacity * 0.1; // Limite de décharge 10%
   const chargeRate = battery.power;
   const efficiency = battery.efficiency || 0.9;
 
@@ -96,7 +102,6 @@ function simulateDayWithBattery(productionCurve, consumptionCurve, battery){
     let hExport = 0;
 
     if(net > 0){
-      // Excès de production -> Charge la batterie
       const room = (maxSoc - soc) / efficiency;
       const charge = Math.min(chargeRate, net, room);
       batteryFlow = charge;
@@ -104,7 +109,6 @@ function simulateDayWithBattery(productionCurve, consumptionCurve, battery){
       hExport = net - charge;
       gridExport += hExport;
     } else {
-      // Déficit -> Décharge la batterie
       const deficit = -net;
       const available = soc - minSoc;
       const discharge = Math.min(chargeRate, deficit, Math.max(0, available));
@@ -177,19 +181,20 @@ function runSimulationForEntry(entryIdx, battIdx){
 
   // Production Curve
   let productionCurve;
-  if(entry.hourlyProduction && entry.hourlyProduction.some(v => v > 0)){
+  const hasRealProd = entry.hourlyProduction && entry.hourlyProduction.reduce((a, b) => a + b, 0) > 0.05;
+  if(hasRealProd){
     productionCurve = entry.hourlyProduction;
   } else {
     const avgAzimuth = currentProfile.pvGroups.reduce((s, g) => s + g.azimuth, 0) /
       (currentProfile.pvGroups.length || 1);
-    const dailyProd = totalDailyProduction(currentProfile.pvGroups, monthIndex);
+    const dailyProd = entry.pvProduction || totalDailyProduction(currentProfile.pvGroups, monthIndex);
     productionCurve = hourlyProductionCurve(dailyProd, avgAzimuth, monthIndex);
   }
 
   // Consumption Curve
   let consumptionCurve = reconstructConsumptionFromP1(entry);
 
-  // Run Simulations
+  // Simulations
   const without = simulateDayWithoutBattery(productionCurve, consumptionCurve);
   const withBatt = simulateDayWithBattery(productionCurve, consumptionCurve, battery);
 
