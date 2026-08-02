@@ -1,13 +1,13 @@
-// Instances globales pour éviter les conflits au re-rendu
-// Ces variables ne doivent être déclarées ICI et nulle part ailleurs
-if (typeof chartRawInstance === 'undefined') var chartRawInstance = null;
-if (typeof chartConsInstance === 'undefined') var chartConsInstance = null;
-if (typeof chartSimInstance === 'undefined') var chartSimInstance = null;
-if (typeof chartSocInstance === 'undefined') var chartSocInstance = null;
+// ============================================================
+// INSTANCES DE GRAPHIQUES (Scope global window pour éviter les conflits)
+// ============================================================
+window.chartRawInstance = window.chartRawInstance || null;
+window.chartConsInstance = window.chartConsInstance || null;
+window.chartSimInstance = window.chartSimInstance || null;
+window.chartSocInstance = window.chartSocInstance || null;
 
 const chartHours = Array.from({length: 24}, (_, h) => h + 'h');
 
-// Options communes pour un design sombre et propre
 const commonChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -27,12 +27,12 @@ const commonChartOptions = {
 // ============================================================
 function renderRawChart(res) {
   const ctx = document.getElementById('chartRaw').getContext('2d');
-  if (chartRawInstance) chartRawInstance.destroy();
+  if (window.chartRawInstance) window.chartRawInstance.destroy();
 
   const rawImport = res.entry.hourlyImport || res.withBatt.hourly.map(h => h.gridImport);
   const rawExport = res.entry.hourlyExport || res.withBatt.hourly.map(h => h.gridExport);
 
-  chartRawInstance = new Chart(ctx, {
+  window.chartRawInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels: chartHours,
@@ -72,9 +72,9 @@ function renderRawChart(res) {
 // ============================================================
 function renderConsChart(res) {
   const ctx = document.getElementById('chartCons').getContext('2d');
-  if (chartConsInstance) chartConsInstance.destroy();
+  if (window.chartConsInstance) window.chartConsInstance.destroy();
 
-  chartConsInstance = new Chart(ctx, {
+  window.chartConsInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels: chartHours,
@@ -96,9 +96,9 @@ function renderConsChart(res) {
 // ============================================================
 function renderSimChart(res) {
   const ctx = document.getElementById('chartSim').getContext('2d');
-  if (chartSimInstance) chartSimInstance.destroy();
+  if (window.chartSimInstance) window.chartSimInstance.destroy();
 
-  chartSimInstance = new Chart(ctx, {
+  window.chartSimInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels: chartHours,
@@ -130,13 +130,13 @@ function renderSimChart(res) {
 // ============================================================
 function renderSocChart(res) {
   const ctx = document.getElementById('chartSoc').getContext('2d');
-  if (chartSocInstance) chartSocInstance.destroy();
+  if (window.chartSocInstance) window.chartSocInstance.destroy();
 
   const battCapacity = currentProfile.batteryOffers[
     document.getElementById('simBattSelect').value
   ]?.capacity || 10;
 
-  chartSocInstance = new Chart(ctx, {
+  window.chartSocInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels: chartHours,
@@ -199,7 +199,7 @@ function exportPDF() {
   });
 
   y += 5;
-  if (chartRawInstance) {
+  if (window.chartRawInstance) {
     doc.text("1. Flux d'origine mesurés :", 20, y);
     doc.addImage(document.getElementById('chartRaw').toDataURL('image/png'), 'PNG', 20, y + 3, 170, 65);
     y += 75;
@@ -208,13 +208,13 @@ function exportPDF() {
   doc.addPage();
   y = 20;
 
-  if (chartConsInstance) {
+  if (window.chartConsInstance) {
     doc.text("2. Profil de consommation estimé :", 20, y);
     doc.addImage(document.getElementById('chartCons').toDataURL('image/png'), 'PNG', 20, y + 3, 170, 65);
     y += 75;
   }
 
-  if (chartSimInstance) {
+  if (window.chartSimInstance) {
     doc.text("3. Impact de la batterie sur l'import réseau :", 20, y);
     doc.addImage(document.getElementById('chartSim').toDataURL('image/png'), 'PNG', 20, y + 3, 170, 65);
   }
