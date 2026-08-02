@@ -66,7 +66,6 @@ function reconstructConsumptionFromP1(entry){
       hourlyConsumption[i] = Math.max(0, prod - exp + imp);
     }
   } else {
-    // Fallback : Interpolation de la courbe type de 24 à 96 points
     const shape24 = baseLoadShape();
     let shape96 = [];
     for(let i = 0; i < 96; i++){
@@ -85,10 +84,10 @@ function reconstructConsumptionFromP1(entry){
 // ============================================================
 
 function simulateDayWithBattery(productionCurve, consumptionCurve, battery){
-  let soc = battery.capacity * 0.2; // Remplissage initial à 20%
+  let soc = battery.capacity * 0.2;
   const maxSoc = battery.capacity;
   const minSoc = battery.capacity * 0.1;
-  const maxPower15Min = battery.power * 0.25; // max charge/discharge energy in 15 mins (kW * 0.25h)
+  const maxPower15Min = battery.power * 0.25;
   const efficiency = battery.efficiency || 0.9;
 
   let gridImport = 0;
@@ -99,13 +98,12 @@ function simulateDayWithBattery(productionCurve, consumptionCurve, battery){
   for(let i = 0; i < 96; i++){
     const prod = productionCurve[i];
     const cons = consumptionCurve[i];
-    let net = prod - cons; // en kWh
+    let net = prod - cons;
     let batteryFlow = 0;
     let hImport = 0;
     let hExport = 0;
 
     if(net > 0){
-      // Excès solaire -> Charge
       const room = (maxSoc - soc) / efficiency;
       const charge = Math.min(maxPower15Min, net, room);
       batteryFlow = charge;
@@ -113,7 +111,6 @@ function simulateDayWithBattery(productionCurve, consumptionCurve, battery){
       hExport = net - charge;
       gridExport += hExport;
     } else {
-      // Déficit de consommation -> Décharge
       const deficit = -net;
       const available = soc - minSoc;
       const discharge = Math.min(maxPower15Min, deficit, Math.max(0, available));
@@ -184,7 +181,6 @@ function runSimulationForEntry(entryIdx, battIdx){
 
   const monthIndex = getMonthIndexFromDate(entry.date);
 
-  // Production Curve
   let productionCurve;
   const hasRealProd = entry.hourlyProduction && entry.hourlyProduction.reduce((a, b) => a + b, 0) > 0.05;
   if(hasRealProd){
@@ -196,14 +192,11 @@ function runSimulationForEntry(entryIdx, battIdx){
     productionCurve = hourlyProductionCurve(dailyProd, avgAzimuth, monthIndex);
   }
 
-  // Consumption Curve
   let consumptionCurve = reconstructConsumptionFromP1(entry);
 
-  // Simulations
   const without = simulateDayWithoutBattery(productionCurve, consumptionCurve);
   const withBatt = simulateDayWithBattery(productionCurve, consumptionCurve, battery);
 
-  // ROI calculations
   const tariff = currentProfile.tariff;
   const costWithout = computeDailyCost(without.gridImport, without.gridExport, tariff);
   const costWith = computeDailyCost(withBatt.gridImport, withBatt.gridExport, tariff);
@@ -241,7 +234,6 @@ function runSimulation(){
   document.getElementById('resPayback').textContent = isFinite(res.payback) ?
     res.payback.toFixed(1) + ' ans' : 'N/A';
 
-  // Render Charts
   renderRawChart(res);
   renderConsChart(res);
   renderSimChart(res);
