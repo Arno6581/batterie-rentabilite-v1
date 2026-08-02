@@ -265,11 +265,18 @@ function addPVEntry(){
     return;
   }
 
-  const existing = currentProfile.p1Entries.find(e => e.date === date);
+  // 1. Cherche par correspondance exacte de date
+  let existing = currentProfile.p1Entries.find(e => e.date === date);
+
+  // 2. Si pas trouvé par date exacte, fusionne avec la dernière entrée P1 sans PV (tolérance OCR)
+  if(!existing && currentProfile.p1Entries.length > 0){
+    existing = currentProfile.p1Entries.find(e => !e.pvProduction) || currentProfile.p1Entries[currentProfile.p1Entries.length - 1];
+  }
+
   if(existing){
     existing.pvProduction = pvTotal;
     existing.hourlyProduction = window.lastPVCurve ? window.lastPVCurve.hourlyProductionKWh : existing.hourlyProduction;
-    alert("Production fusionnée avec P1 du " + date);
+    alert(`Production de ${pvTotal} kWh fusionnée avec succès (Relevé du ${existing.date}) !`);
   } else {
     currentProfile.p1Entries.push({
       date,
@@ -283,12 +290,13 @@ function addPVEntry(){
     alert("Production ajoutée comme nouvelle entrée.");
   }
 
-  saveP1Entries();  // AJOUT: sauvegarde automatique
+  saveP1Entries();
   refreshP1Table();
   document.getElementById('pvTotal').value = '';
   window.lastPVCurve = null;
   document.getElementById('pvStatus').textContent = '';
 }
+
 
 // ============================================================
 // BATTERIES MANAGEMENT
