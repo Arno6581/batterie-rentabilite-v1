@@ -305,9 +305,15 @@ tr:hover {
 }
 
 canvas {
+  width: 100% !important;
+  height: 300px !important;
   max-height: 350px;
   margin-top: 12px;
+  background: #12141c;
+  border-radius: 6px;
+  padding: 8px;
 }
+
 
 .import-section {
   background: #12141c;
