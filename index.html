@@ -1,191 +1,6 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Simulateur Rentabilité Batterie v1.1</title>
-<link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-</head>
-<body>
-
-<header>
-  <h1>🔋 Simulateur Rentabilité Batterie v1.1</h1>
-  <p>Bruxelles — Import P1, production PV réelle, analyse équipements, ROI batterie</p>
-</header>
-
-<nav class="tabs">
-  <button class="tab-btn active" data-tab="profils">1. Profils</button>
-  <button class="tab-btn" data-tab="config">2. Configuration</button>
-  <button class="tab-btn" data-tab="import">3. Import données</button>
-  <button class="tab-btn" data-tab="batteries">4. Offres Batterie</button>
-  <button class="tab-btn" data-tab="simulation">5. Simulation & ROI</button>
-</nav>
-
-<main>
-
-  <!-- TAB 1: PROFILS -->
-  <div class="tab-content active" id="tab-profils">
-    <div class="card">
-      <h2>Gestion des profils familiaux</h2>
-      <p style="color:var(--muted); font-size:0.85rem;">Chaque foyer crée son profil avec ses paramètres.</p>
-      <div style="display:flex; gap:8px; margin-bottom:16px;">
-        <select id="profileSelect" style="flex:1"></select>
-        <button class="btn secondary" onclick="loadSelectedProfile()">Charger</button>
-        <button class="btn danger" onclick="deleteSelectedProfile()">Supprimer</button>
-      </div>
-      <label>Nom du profil</label>
-      <input type="text" id="profileName" placeholder="Ex: Famille Parlante">
-      <button class="btn" onclick="saveCurrentProfile()">💾 Sauvegarder ce profil</button>
-      <button class="btn secondary" onclick="newProfile()">➕ Nouveau profil vierge</button>
-    </div>
-  </div>
-
-  <!-- TAB 2: CONFIGURATION -->
-  <div class="tab-content" id="tab-config">
-    <div class="card">
-      <h2>⚡ Tarifs électricité</h2>
-      <label>Mode tarifaire</label>
-      <select id="tariffMode" onchange="toggleTariffMode()">
-        <option value="mono">Mono-horaire</option>
-        <option value="bi">Bi-horaire</option>
-      </select>
-      <div class="grid2">
-        <div><label id="lblConsumption">Prix consommation (€/kWh)</label><input type="number" step="0.001" id="tariffConsumption" value="0.369"></div>
-        <div><label>Prix injection (€/kWh)</label><input type="number" step="0.001" id="tariffInjection" value="0.0309"></div>
-      </div>
-      <div class="grid2" id="biHoraireFields" style="display:none;">
-        <div><label>Prix nuit (€/kWh)</label><input type="number" step="0.001" id="tariffNight" value="0.20"></div>
-        <div><label>Heures nuit</label><div style="display:flex; gap:8px;"><input type="time" id="nightStart" value="22:00"><input type="time" id="nightEnd" value="06:00"></div></div>
-      </div>
-    </div>
-    <div class="card">
-      <h2>☀️ Panneaux solaires</h2>
-      <div id="pvGroupsContainer"></div>
-      <button class="btn secondary" onclick="addPvGroup()">➕ Ajouter un groupe</button>
-    </div>
-    <div class="card">
-      <h2>🏠 Gros consommateurs</h2>
-      <div class="group-box">
-        <label><input type="checkbox" id="wmEnabled"> Machine à laver</label>
-        <div class="grid3">
-          <div><label>Puissance (W)</label><input type="number" id="wmPower" value="2000"></div>
-          <div><label>Durée (h)</label><input type="number" step="0.1" id="wmDuration" value="1.5"></div>
-          <div><label>Heure début</label><input type="number" min="0" max="23" id="wmHour" value="14"></div>
-        </div>
-      </div>
-      <div class="group-box">
-        <label><input type="checkbox" id="dwEnabled"> Lave-vaisselle</label>
-        <div class="grid3">
-          <div><label>Puissance (W)</label><input type="number" id="dwPower" value="1500"></div>
-          <div><label>Durée (h)</label><input type="number" step="0.1" id="dwDuration" value="2"></div>
-          <div><label>Heure début</label><input type="number" min="0" max="23" id="dwHour" value="13"></div>
-        </div>
-      </div>
-      <div class="group-box">
-        <label><input type="checkbox" id="dryEnabled"> Sèche-linge</label>
-        <div class="grid3">
-          <div><label>Puissance (W)</label><input type="number" id="dryPower" value="2500"></div>
-          <div><label>Durée (h)</label><input type="number" step="0.1" id="dryDuration" value="1.5"></div>
-          <div><label>Heure début</label><input type="number" min="0" max="23" id="dryHour" value="15"></div>
-        </div>
-      </div>
-      <h3>Climatisation(s)</h3>
-      <div id="acContainer"></div>
-      <button class="btn secondary" onclick="addAcUnit()">➕ Ajouter climatisation</button>
-      <h3>Véhicule électrique</h3>
-      <div class="group-box">
-        <label><input type="checkbox" id="evEnabled"> Voiture électrique</label>
-        <div class="grid3">
-          <div><label>Capacité (kWh)</label><input type="number" id="evCapacity" value="60"></div>
-          <div><label>Puissance charge (kW)</label><input type="number" step="0.1" id="evPower" value="7.4"></div>
-          <div><label>Heure début</label><input type="number" min="0" max="23" id="evHour" value="22"></div>
-        </div>
-        <label>Énergie à charger (kWh)</label><input type="number" id="evChargeAmount" value="30">
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB 3: IMPORT DONNÉES -->
-  <div class="tab-content" id="tab-import">
-    <div class="card">
-      <h2>📷 Import P1 HomeWizard</h2>
-      <div class="import-section">
-        <label><strong>Screenshot HomeWizard</strong></label>
-        <input type="file" id="p1Image" accept="image/*" onchange="handleP1Image(event)">
-        <div id="p1Status" style="margin-top:10px; color:var(--muted); font-size:0.85rem;"></div>
-      </div>
-      <div class="grid3" style="margin-top:16px;">
-        <div><label>Date du relevé</label><input type="date" id="p1Date"></div>
-        <div><label>Grid - Import (kWh)</label><input type="number" step="0.1" id="p1Grid"></div>
-        <div><label>Surplus - Injection (kWh)</label><input type="number" step="0.1" id="p1Surplus"></div>
-      </div>
-      <button class="btn" onclick="addP1Entry()">➕ Ajouter ce relevé P1</button>
-    </div>
-    <div class="card">
-      <h2>☀️ Import Production SolarEdge (optionnel)</h2>
-      <div class="import-section">
-        <label><strong>Screenshot SolarEdge</strong></label>
-        <input type="file" id="pvImage" accept="image/*" onchange="handlePVImage(event)">
-        <div id="pvStatus" style="margin-top:10px; color:var(--muted); font-size:0.85rem;"></div>
-      </div>
-      <div class="grid2" style="margin-top:16px;">
-        <div><label>Date production</label><input type="date" id="pvDate"></div>
-        <div><label>Production totale (kWh)</label><input type="number" step="0.1" id="pvTotal"></div>
-      </div>
-      <button class="btn" onclick="addPVEntry()">➕ Ajouter cette production</button>
-    </div>
-    <div class="card">
-      <h2>Relevés enregistrés</h2>
-      <table id="p1Table">
-        <thead><tr><th>Date</th><th>Grid (kWh)</th><th>Surplus (kWh)</th><th>Production PV</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- TAB 4: BATTERIES -->
-  <div class="tab-content" id="tab-batteries">
-    <div class="card">
-      <h2>🔋 Offres de batteries</h2>
-      <div class="grid3">
-        <div><label>Nom</label><input type="text" id="battName" placeholder="Ex: Fournisseur A"></div>
-        <div><label>Capacité (kWh)</label><input type="number" id="battCapacity" value="10"></div>
-        <div><label>Puissance (kW)</label><input type="number" step="0.1" id="battPower" value="5"></div>
-      </div>
-      <div class="grid3">
-        <div><label>Coût (€)</label><input type="number" id="battCost" value="8000"></div>
-        <div><label>Rendement (%)</label><input type="number" id="battEfficiency" value="90"></div>
-        <div><label>Garantie (ans)</label><input type="number" id="battWarranty" value="10"></div>
-      </div>
-      <button class="btn" onclick="addBatteryOffer()">➕ Ajouter offre</button>
-    </div>
-    <div class="card">
-      <h2>Offres enregistrées</h2>
-      <table id="battTable">
-        <thead><tr><th>Nom</th><th>Capacité</th><th>Puissance</th><th>Coût</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- TAB 5: SIMULATION -->
-  <div class="tab-content" id="tab-simulation">
-    <div class="card">
-      <h2>Paramètres de simulation</h2>
-      <div class="grid2">
-        <div><label>Relevé P1</label><select id="simP1Select"></select></div>
-        <div><label>Offre batterie</label><select id="simBattSelect"></select></div>
-      </div>
-      <button class="btn" onclick="runSimulation()">▶️ Lancer la simulation</button>
-      <button class="btn secondary" onclick="runAllBatteriesComparison()">📊 Comparer toutes les offres</button>
-      <button class="btn secondary" onclick="exportPDF()">📄 Exporter en PDF</button>
-    </div>
     <div id="simResults" style="display:none;">
       <div class="card">
-        <h2>Résultats — journée simulée</h2>
+        <h2>Analyse Graphique et Résultats</h2>
         <div class="result-box">
           <div class="result-item"><div class="val" id="resGridWithout">-</div><div class="lbl">Import SANS batterie (kWh)</div></div>
           <div class="result-item"><div class="val" id="resGridWith">-</div><div class="lbl">Import AVEC batterie (kWh)</div></div>
@@ -193,53 +8,21 @@
           <div class="result-item"><div class="val" id="resAnnualSavings">-</div><div class="lbl">Économie annuelle (€)</div></div>
           <div class="result-item"><div class="val" id="resPayback">-</div><div class="lbl">Payback (années)</div></div>
         </div>
-        <canvas id="chartDay"></canvas>
-      </div>
-      <div class="card">
-        <h2>État de charge batterie (24h)</h2>
+
+        <h3 style="margin-top:24px;">📊 1. Mesures d'origine (Réseau P1 & Production PV)</h3>
+        <p style="color:var(--muted); font-size:0.8rem; margin-bottom:10px;">Visualisation des flux bruts mesurés par le compteur intelligent et l'onduleur avant simulation.</p>
+        <canvas id="chartRaw"></canvas>
+
+        <h3 style="margin-top:32px;">📈 2. Profil de Consommation de la Maison</h3>
+        <p style="color:var(--muted); font-size:0.8rem; margin-bottom:10px;">Consommation totale calculée de l'habitation (Production + Import - Export). Les pics d'équipements y sont visibles.</p>
+        <canvas id="chartCons"></canvas>
+
+        <h3 style="margin-top:32px;">🔋 3. Impact de la Batterie sur l'Import Réseau</h3>
+        <p style="color:var(--muted); font-size:0.8rem; margin-bottom:10px;">Comparatif de ce que vous devez encore acheter au réseau avec la batterie active (zone bleue) par rapport à votre consommation (zone rouge).</p>
+        <canvas id="chartSim"></canvas>
+
+        <h3 style="margin-top:32px;">⚡ 4. Niveau de Charge de la Batterie (SoC)</h3>
+        <p style="color:var(--muted); font-size:0.8rem; margin-bottom:10px;">Cycle de charge (journée avec surplus solaire) et décharge (soirée/nuit) de la batterie de stockage.</p>
         <canvas id="chartSoc"></canvas>
       </div>
     </div>
-    <div id="comparisonResults" style="display:none;">
-      <div class="card">
-        <h2>Comparatif des offres</h2>
-        <table id="comparisonTable">
-          <thead><tr><th>Offre</th><th>Capacité</th><th>Coût</th><th>Éco. annuelle</th><th>Payback</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-</main>
-
-<script src="js/config.js"></script>
-<script src="js/ui-forms.js"></script>
-<script src="js/ocr-extraction.js"></script>
-<script src="js/simulation.js"></script>
-<script src="js/charts-export.js"></script>
-
-<script>
-// Init
-window.addEventListener('DOMContentLoaded', () => {
-  refreshProfileSelect();
-  syncProfileToForm();
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('p1Date').value = today;
-  document.getElementById('pvDate').value = today;
-  
-  // Tab navigation
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-      if(btn.dataset.tab === 'simulation') refreshSimulationSelects();
-    });
-  });
-});
-</script>
-
-</body>
-</html>
