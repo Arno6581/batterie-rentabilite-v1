@@ -345,7 +345,10 @@ function runSimulation(){
   document.getElementById('resPayback').textContent = isFinite(res.payback) ?
     res.payback.toFixed(1) + ' ans' : 'N/A';
 
-  renderDayChart(res);
+  // Appel des 4 fonctions d'affichage
+  renderRawChart(res);
+  renderConsChart(res);
+  renderSimChart(res);
   renderSocChart(res);
 }
 
