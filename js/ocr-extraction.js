@@ -184,14 +184,12 @@ async function runOCR(file){
 
 function extractHomeWizardValues(text){
   const clean = text.toLowerCase().replace(/\s+/g, ' ');
-  
   let grid = null;
   let surplus = null;
 
   const gridIdx = clean.indexOf('grid');
   const surplusIdx = clean.indexOf('surplus');
 
-  // Trouver tous les chiffres suivis de kWh
   const kwhNumbers = [];
   const kwhRegex = /(\d+[.,]\d+)\s*kwh/g;
   let match;
@@ -203,7 +201,6 @@ function extractHomeWizardValues(text){
   }
 
   if (kwhNumbers.length >= 2) {
-    // Corréler avec la position des mots clés dans le texte extrait
     if (gridIdx !== -1 && surplusIdx !== -1) {
       if (gridIdx < surplusIdx) {
         grid = kwhNumbers[0].val;
@@ -217,7 +214,6 @@ function extractHomeWizardValues(text){
       surplus = kwhNumbers[1].val;
     }
   } else {
-    // Fallback regex classique
     const gMatch = clean.match(/grid\s*[:\-]?\s*(\d+[.,]\d+)/i);
     const sMatch = clean.match(/surplus\s*[:\-]?\s*(\d+[.,]\d+)/i);
     if(gMatch) grid = parseFloat(gMatch[1].replace(',', '.'));
@@ -235,12 +231,12 @@ function extractSolarEdgeProduction(text){
 }
 
 // ============================================================
-// ROBUST DATE EXTRACTOR
+// ULTRA-ROBUST DATE EXTRACTOR
 // ============================================================
 
 function extractDateFromText(text){
   const today = new Date();
-  const clean = text.toLowerCase().replace(/\s+/g, ' ');
+  const clean = text.toLowerCase();
 
   if(clean.includes('yesterday') || clean.includes('hier')){
     const d = new Date(today);
@@ -248,30 +244,32 @@ function extractDateFromText(text){
     return d.toISOString().split('T')[0];
   }
 
-  // Format "31/07/2026" ou "31-07-26"
-  const numericDate = clean.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  // 1. Format numérique explicite (ex: 31/07/2026 ou 31-07-26)
+  const numericDate = clean.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})?/);
   if(numericDate){
     const day = parseInt(numericDate[1]);
     const month = parseInt(numericDate[2]) - 1;
-    let year = parseInt(numericDate[3]);
+    let year = numericDate[3] ? parseInt(numericDate[3]) : today.getFullYear();
     if(year < 100) year += 2000;
-    return new Date(year, month, day).toISOString().split('T')[0];
+    if(month >= 0 && month < 12 && day > 0 && day <= 31){
+      return new Date(year, month, day).toISOString().split('T')[0];
+    }
   }
 
-  // Dictionnaire des mois
+  // 2. Format textuel (ex: "Fri 31 Jul" ou "ven. 31 juil.")
   const months = {
     jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11,
     janv:0, févr:1, mars:2, avr:3, mai:4, juin:5, juil:6, août:7, sept:8, octo:9, nov:10, déc:11,
-    janvier:0, février:1, avril:3, juillet:6, septembre:8, octobre:9, novembre:10, décembre:11
+    january:0, february:1, march:2, april:3, may:4, june:5, july:6, august:7, september:8, october:9, november:10, december:11,
+    janvier:0, février:1, mars:2, avril:3, mai:4, juin:5, juillet:6, août:7, septembre:8, octobre:9, novembre:10, décembre:11
   };
 
-  // Format "Fri 31 Jul" ou "ven. 31 juil."
-  const wordMatch = clean.match(/(?:mon|tue|wed|thu|fri|sat|sun|lun|mar|mer|jeu|ven|sam|dim)?\.?\s*(\d{1,2})\s*([a-zéûœè]+)/i);
-  if(wordMatch){
-    const day = parseInt(wordMatch[1]);
-    const monthStr = wordMatch[2].substring(0, 4); // Prend les 4 premières lettres pour matcher le dict
-    if(months[monthStr] !== undefined){
-      const month = months[monthStr];
+  const words = clean.replace(/[^\w\s]/gi, ' ').split(/\s+/);
+  for(let i = 0; i < words.length - 1; i++){
+    let day = parseInt(words[i]);
+    let monthWord = words[i+1].substring(0, 4);
+    if(!isNaN(day) && day > 0 && day <= 31 && months[monthWord] !== undefined){
+      const month = months[monthWord];
       const year = today.getFullYear();
       return new Date(year, month, day).toISOString().split('T')[0];
     }
@@ -304,7 +302,7 @@ async function handleP1Image(event){
     window.lastP1Curve = curve;
 
     document.getElementById('p1Status').innerHTML =
-      `<span style="color:var(--accent);">✓ OCR réussi — Grid: ${grid ?? '?'} kWh, Surplus: ${surplus ?? '?'} kWh, Date: ${date}</span>`;
+      `<span style="color:var(--accent);">✓ OCR réussi — Grid: ${grid ?? '?'} kWh, Surplus: ${surplus ?? '?'} kWh, Date: ${date} (Vérifiable ci-dessous)</span>`;
 
   } catch(e){
     document.getElementById('p1Status').innerHTML =
@@ -339,7 +337,7 @@ async function handlePVImage(event){
     }
 
     document.getElementById('pvStatus').innerHTML =
-      `<span style="color:var(--accent);">✓ OCR réussi — Production: ${production ?? '?'} kWh, Date: ${date}</span>`;
+      `<span style="color:var(--accent);">✓ OCR réussi — Production: ${production ?? '?'} kWh, Date: ${date} (Vérifiable ci-dessous)</span>`;
 
   } catch(e){
     document.getElementById('pvStatus').innerHTML =
