@@ -72,123 +72,13 @@ function reconstructConsumptionFromP1(entry){
 }
 
 // ============================================================
-// PEAK DETECTION FOR APPLIANCES
-// ============================================================
-
-function detectPeaksInCurve(hourlyConsumptionKW, threshold = 0.5){
-  const peaks = [];
-  let inPeak = false;
-  let peakStart = null;
-  let peakMax = 0;
-  let peakValues = [];
-
-  for(let h = 0; h < hourlyConsumptionKW.length; h++){
-    const val = hourlyConsumptionKW[h];
-
-    if(val >= threshold && !inPeak){
-      inPeak = true;
-      peakStart = h;
-      peakMax = val;
-      peakValues = [val];
-    } else if(val >= threshold && inPeak){
-      peakMax = Math.max(peakMax, val);
-      peakValues.push(val);
-    } else if(val < threshold && inPeak){
-      inPeak = false;
-      const duration = h - peakStart;
-      if(duration >= 0.5){
-        peaks.push({
-          startHour: peakStart,
-          endHour: h,
-          durationMin: duration * 60,
-          maxPower: peakMax,
-          avgPower: peakValues.reduce((a, b) => a + b, 0) / peakValues.length,
-          values: peakValues,
-          pattern: analyzePattern(peakValues)
-        });
-      }
-      peakValues = [];
-    }
-  }
-
-  if(inPeak){
-    const duration = hourlyConsumptionKW.length - peakStart;
-    peaks.push({
-      startHour: peakStart,
-      endHour: hourlyConsumptionKW.length,
-      durationMin: duration * 60,
-      maxPower: peakMax,
-      avgPower: peakValues.reduce((a, b) => a + b, 0) / peakValues.length,
-      values: peakValues,
-      pattern: analyzePattern(peakValues)
-    });
-  }
-
-  return peaks;
-}
-
-function analyzePattern(values){
-  if(values.length < 2) return "unknown";
-
-  const variance = values.reduce((s, v, i, a) => {
-    const avg = a.reduce((x, y) => x + y, 0) / a.length;
-    return s + Math.pow(v - avg, 2);
-  }, 0) / values.length;
-
-  const stdDev = Math.sqrt(variance);
-  const avgVal = values.reduce((a, b) => a + b, 0) / values.length;
-  const coef = stdDev / avgVal;
-
-  const firstVal = values[0];
-  const lastVal = values[values.length - 1];
-
-  if(coef > 0.3){
-    return "oscillant";
-  } else if(firstVal < lastVal * 0.7){
-    return "plateau_debut";
-  } else if(lastVal > firstVal * 1.2){
-    return "double_pic";
-  } else {
-    return "plateau_simple";
-  }
-}
-
-function matchAppliance(peak){
-  const candidates = [];
-
-  Object.entries(APPLIANCE_SIGNATURES).forEach(([key, sig]) => {
-    const powerMatch = peak.maxPower >= sig.powerRange[0] && peak.maxPower <= sig.powerRange[1];
-    const durationMatch = peak.durationMin >= sig.durationRange[0] && peak.durationMin <= sig.durationRange[1];
-    const patternMatch = peak.pattern === sig.pattern;
-
-    let score = 0;
-    if(powerMatch) score += 40;
-    if(durationMatch) score += 40;
-    if(patternMatch) score += 20;
-
-    if(score > 0){
-      candidates.push({
-        key,
-        name: sig.name,
-        score,
-        confidence: score / 100,
-        description: sig.description
-      });
-    }
-  });
-
-  candidates.sort((a, b) => b.score - a.score);
-  return candidates;
-}
-
-// ============================================================
 // BATTERY SIMULATION
 // ============================================================
 
 function simulateDayWithBattery(productionCurve, consumptionCurve, battery){
-  let soc = battery.capacity * 0.2;
+  let soc = battery.capacity * 0.2; // Commence à 20%
   const maxSoc = battery.capacity;
-  const minSoc = battery.capacity * 0.1;
+  const minSoc = battery.capacity * 0.1; // Seuil minimum 10%
   const chargeRate = battery.power;
   const efficiency = battery.efficiency || 0.9;
 
@@ -206,7 +96,7 @@ function simulateDayWithBattery(productionCurve, consumptionCurve, battery){
     let hExport = 0;
 
     if(net > 0){
-      // Excess production
+      // Excès de production -> Charge la batterie
       const room = (maxSoc - soc) / efficiency;
       const charge = Math.min(chargeRate, net, room);
       batteryFlow = charge;
@@ -214,7 +104,7 @@ function simulateDayWithBattery(productionCurve, consumptionCurve, battery){
       hExport = net - charge;
       gridExport += hExport;
     } else {
-      // Deficit
+      // Déficit -> Décharge la batterie
       const deficit = -net;
       const available = soc - minSoc;
       const discharge = Math.min(chargeRate, deficit, Math.max(0, available));
@@ -265,7 +155,7 @@ function computeDailyCost(gridImport, gridExport, tariff){
 }
 
 // ============================================================
-// MAIN SIMULATION RUNNER
+// MAIN SIMULATION RUNNERS
 // ============================================================
 
 function getMonthIndexFromDate(dateStr){
@@ -285,7 +175,7 @@ function runSimulationForEntry(entryIdx, battIdx){
 
   const monthIndex = getMonthIndexFromDate(entry.date);
 
-  // Production: priorité à la réelle, sinon théorique
+  // Production Curve
   let productionCurve;
   if(entry.hourlyProduction && entry.hourlyProduction.some(v => v > 0)){
     productionCurve = entry.hourlyProduction;
@@ -296,14 +186,14 @@ function runSimulationForEntry(entryIdx, battIdx){
     productionCurve = hourlyProductionCurve(dailyProd, avgAzimuth, monthIndex);
   }
 
-  // Consommation
+  // Consumption Curve
   let consumptionCurve = reconstructConsumptionFromP1(entry);
 
-  // Simulations
+  // Run Simulations
   const without = simulateDayWithoutBattery(productionCurve, consumptionCurve);
   const withBatt = simulateDayWithBattery(productionCurve, consumptionCurve, battery);
 
-  // ROI
+  // ROI calculations
   const tariff = currentProfile.tariff;
   const costWithout = computeDailyCost(without.gridImport, without.gridExport, tariff);
   const costWith = computeDailyCost(withBatt.gridImport, withBatt.gridExport, tariff);
@@ -324,10 +214,6 @@ function runSimulationForEntry(entryIdx, battIdx){
   };
 }
 
-// ============================================================
-// RUN SINGLE SIMULATION
-// ============================================================
-
 function runSimulation(){
   const entryIdx = parseInt(document.getElementById('simP1Select').value);
   const battIdx = parseInt(document.getElementById('simBattSelect').value);
@@ -345,16 +231,12 @@ function runSimulation(){
   document.getElementById('resPayback').textContent = isFinite(res.payback) ?
     res.payback.toFixed(1) + ' ans' : 'N/A';
 
-  // Appel des 4 fonctions d'affichage
+  // Lance les rendus de graphiques (charts-export.js)
   renderRawChart(res);
   renderConsChart(res);
   renderSimChart(res);
   renderSocChart(res);
 }
-
-// ============================================================
-// COMPARE ALL BATTERIES
-// ============================================================
 
 function runAllBatteriesComparison(){
   const entryIdx = parseInt(document.getElementById('simP1Select').value);
