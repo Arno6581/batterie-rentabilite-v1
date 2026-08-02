@@ -77,7 +77,6 @@ async function extractHomeWizardCurve(canvasData){
       }
     }
 
-    // Convertir position Y en valeur (W)
     const yToValue = (yPos) => {
       const ratio = yPos / chartHeightPx;
       return bounds.valueTop + ratio * (bounds.valueBottom - bounds.valueTop);
@@ -100,7 +99,6 @@ async function extractHomeWizardCurve(canvasData){
     }
   }
 
-  // Moyenne et conversion W -> kWh
   let hourlyImportKWh = hourlyImportW.map((v, i) =>
     hourlySamples[i] > 0 ? (v / hourlySamples[i]) / 1000 : 0
   );
@@ -167,7 +165,7 @@ async function extractSolarEdgeCurve(canvasData){
 }
 
 // ============================================================
-// OCR VIA TESSERACT
+// OCR EXECUTION
 // ============================================================
 
 async function runOCR(file){
@@ -181,136 +179,157 @@ async function runOCR(file){
 }
 
 // ============================================================
-// EXTRACT HOMEWIZARD VALUES FROM TEXT
+// ROBUST HOMEWIZARD EXTRACTOR (GRID vs SURPLUS)
 // ============================================================
 
 function extractHomeWizardValues(text){
-  // Cherche Grid et Surplus avec meilleure précision
-  const gridMatch = text.match(/Grid[\s\S]{0,15}?(\d+[.,]\d+)/i);
-  const surplusMatch = text.match(/Surplus[\s\S]{0,15}?(\d+[.,]\d+)/i);
+  const clean = text.toLowerCase().replace(/\s+/g, ' ');
+  
+  let grid = null;
+  let surplus = null;
 
-  let grid = gridMatch ? parseFloat(gridMatch[1].replace(',', '.')) : null;
-  let surplus = surplusMatch ? parseFloat(surplusMatch[1].replace(',', '.')) : null;
+  const gridIdx = clean.indexOf('grid');
+  const surplusIdx = clean.indexOf('surplus');
+
+  // Trouver tous les chiffres suivis de kWh
+  const kwhNumbers = [];
+  const kwhRegex = /(\d+[.,]\d+)\s*kwh/g;
+  let match;
+  while ((match = kwhRegex.exec(clean)) !== null) {
+    kwhNumbers.push({
+      val: parseFloat(match[1].replace(',', '.')),
+      index: match.index
+    });
+  }
+
+  if (kwhNumbers.length >= 2) {
+    // Corréler avec la position des mots clés dans le texte extrait
+    if (gridIdx !== -1 && surplusIdx !== -1) {
+      if (gridIdx < surplusIdx) {
+        grid = kwhNumbers[0].val;
+        surplus = kwhNumbers[kwhNumbers.length - 1].val;
+      } else {
+        grid = kwhNumbers[kwhNumbers.length - 1].val;
+        surplus = kwhNumbers[0].val;
+      }
+    } else {
+      grid = kwhNumbers[0].val;
+      surplus = kwhNumbers[1].val;
+    }
+  } else {
+    // Fallback regex classique
+    const gMatch = clean.match(/grid\s*[:\-]?\s*(\d+[.,]\d+)/i);
+    const sMatch = clean.match(/surplus\s*[:\-]?\s*(\d+[.,]\d+)/i);
+    if(gMatch) grid = parseFloat(gMatch[1].replace(',', '.'));
+    if(sMatch) surplus = parseFloat(sMatch[1].replace(',', '.'));
+  }
 
   return { grid, surplus };
 }
 
-// ============================================================
-// EXTRACT SOLAREDGE PRODUCTION FROM TEXT
-// ============================================================
-
 function extractSolarEdgeProduction(text){
-  const match = text.match(/Production[\s\S]{0,20}?(\d+[.,]\d+)\s*kWh/i);
-  if(match){
-    return parseFloat(match[1].replace(',', '.'));
-  }
-
-  // Fallback: cherche juste un nombre suivi de kWh
+  const match = text.match(/Production[\s\S]{0,25}?(\d+[.,]\d+)\s*kWh/i);
+  if(match) return parseFloat(match[1].replace(',', '.'));
   const fallback = text.match(/(\d+[.,]\d+)\s*kWh/i);
   return fallback ? parseFloat(fallback[1].replace(',', '.')) : null;
 }
 
 // ============================================================
-// EXTRACT DATE FROM TEXT
+// ROBUST DATE EXTRACTOR
 // ============================================================
 
 function extractDateFromText(text){
   const today = new Date();
+  const clean = text.toLowerCase().replace(/\s+/g, ' ');
 
-  // Check "Yesterday"
-  if(/yesterday/i.test(text)){
+  if(clean.includes('yesterday') || clean.includes('hier')){
     const d = new Date(today);
     d.setDate(d.getDate() - 1);
     return d.toISOString().split('T')[0];
   }
 
-  // Format anglais "Fri 31 Jul"
-  const monthsEn = {
-    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
-  };
-  const enMatch = text.match(/(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i);
-  if(enMatch){
-    const day = parseInt(enMatch[1]);
-    const month = monthsEn[enMatch[2].toLowerCase()];
-    const year = today.getFullYear();
+  // Format "31/07/2026" ou "31-07-26"
+  const numericDate = clean.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if(numericDate){
+    const day = parseInt(numericDate[1]);
+    const month = parseInt(numericDate[2]) - 1;
+    let year = parseInt(numericDate[3]);
+    if(year < 100) year += 2000;
     return new Date(year, month, day).toISOString().split('T')[0];
   }
 
-  // Format français "ven. 31/07/2026"
-  const frMatch = text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-  if(frMatch){
-    const day = parseInt(frMatch[1]);
-    const month = parseInt(frMatch[2]) - 1;
-    let year = parseInt(frMatch[3]);
-    if(year < 100) year += 2000;
-    return new Date(year, month, day).toISOString().split('T')[0];
+  // Dictionnaire des mois
+  const months = {
+    jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11,
+    janv:0, févr:1, mars:2, avr:3, mai:4, juin:5, juil:6, août:7, sept:8, octo:9, nov:10, déc:11,
+    janvier:0, février:1, avril:3, juillet:6, septembre:8, octobre:9, novembre:10, décembre:11
+  };
+
+  // Format "Fri 31 Jul" ou "ven. 31 juil."
+  const wordMatch = clean.match(/(?:mon|tue|wed|thu|fri|sat|sun|lun|mar|mer|jeu|ven|sam|dim)?\.?\s*(\d{1,2})\s*([a-zéûœè]+)/i);
+  if(wordMatch){
+    const day = parseInt(wordMatch[1]);
+    const monthStr = wordMatch[2].substring(0, 4); // Prend les 4 premières lettres pour matcher le dict
+    if(months[monthStr] !== undefined){
+      const month = months[monthStr];
+      const year = today.getFullYear();
+      return new Date(year, month, day).toISOString().split('T')[0];
+    }
   }
 
   return today.toISOString().split('T')[0];
 }
 
 // ============================================================
-// HANDLE P1 IMAGE UPLOAD
+// IMAGE UPLOAD HANDLERS
 // ============================================================
 
 async function handleP1Image(event){
   const file = event.target.files[0];
   if(!file) return;
 
-  document.getElementById('p1Status').textContent = "⏳ Analyse OCR + extraction courbe en cours...";
+  document.getElementById('p1Status').innerHTML = "⏳ Analyse OCR en cours (Tesseract)...";
 
   try {
-    // OCR
     const text = await runOCR(file);
     const { grid, surplus } = extractHomeWizardValues(text);
     const date = extractDateFromText(text);
 
-    // Remplir les champs
     if(grid !== null) document.getElementById('p1Grid').value = grid;
     if(surplus !== null) document.getElementById('p1Surplus').value = surplus;
     document.getElementById('p1Date').value = date;
 
-    // Extraction pixel
     const canvasData = await loadImageToCanvas(file);
     const curve = await extractHomeWizardCurve(canvasData);
     window.lastP1Curve = curve;
 
     document.getElementById('p1Status').innerHTML =
-      `<span style="color:var(--accent);">✓ OCR terminé — Grid: ${grid ?? '?'} kWh, Surplus: ${surplus ?? '?'} kWh, Date: ${date}</span>`;
+      `<span style="color:var(--accent);">✓ OCR réussi — Grid: ${grid ?? '?'} kWh, Surplus: ${surplus ?? '?'} kWh, Date: ${date}</span>`;
 
   } catch(e){
     document.getElementById('p1Status').innerHTML =
-      `<span style="color:var(--danger);">❌ Erreur : ${e.message}. Saisie manuelle requise.</span>`;
+      `<span style="color:var(--danger);">❌ Erreur : ${e.message}. Saisie manuelle possible.</span>`;
   }
 }
-
-// ============================================================
-// HANDLE PV IMAGE UPLOAD
-// ============================================================
 
 async function handlePVImage(event){
   const file = event.target.files[0];
   if(!file) return;
 
-  document.getElementById('pvStatus').textContent = "⏳ Analyse OCR + extraction courbe en cours...";
+  document.getElementById('pvStatus').innerHTML = "⏳ Analyse OCR en cours (Tesseract)...";
 
   try {
-    // OCR
     const text = await runOCR(file);
     const production = extractSolarEdgeProduction(text);
     const date = extractDateFromText(text);
 
-    // Remplir les champs
     if(production !== null) document.getElementById('pvTotal').value = production;
     document.getElementById('pvDate').value = date;
 
-    // Extraction pixel
     const canvasData = await loadImageToCanvas(file);
     const curve = await extractSolarEdgeCurve(canvasData);
     window.lastPVCurve = curve;
 
-    // Recalibre la courbe pour que la somme = production totale
     if(production !== null){
       const sumExtracted = curve.hourlyProductionKWh.reduce((a, b) => a + b, 0);
       if(sumExtracted > 0){
@@ -320,10 +339,10 @@ async function handlePVImage(event){
     }
 
     document.getElementById('pvStatus').innerHTML =
-      `<span style="color:var(--accent);">✓ OCR terminé — Production: ${production ?? '?'} kWh, Date: ${date}</span>`;
+      `<span style="color:var(--accent);">✓ OCR réussi — Production: ${production ?? '?'} kWh, Date: ${date}</span>`;
 
   } catch(e){
     document.getElementById('pvStatus').innerHTML =
-      `<span style="color:var(--danger);">❌ Erreur : ${e.message}. Saisie manuelle requise.</span>`;
+      `<span style="color:var(--danger);">❌ Erreur : ${e.message}. Saisie manuelle possible.</span>`;
   }
 }
