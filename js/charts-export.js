@@ -6,10 +6,10 @@ let chartSocInstance = null;
 
 const chartHours = Array.from({length: 24}, (_, h) => h + 'h');
 
-// Options communes pour un design sombre et propre
+// Options communes pour un design sombre et propre (Responsive & non bloqué par l'aspectRatio)
 const commonChartOptions = {
   responsive: true,
-  maintainAspectRatio: true,
+  maintainAspectRatio: false,
   plugins: {
     legend: {
       labels: { color: '#e5e7eb', font: { size: 11 } }
@@ -28,7 +28,6 @@ function renderRawChart(res) {
   const ctx = document.getElementById('chartRaw').getContext('2d');
   if (chartRawInstance) chartRawInstance.destroy();
 
-  // Extraction ou fallback des données brutes P1
   const rawImport = res.entry.hourlyImport || res.withBatt.hourly.map(h => h.gridImport);
   const rawExport = res.entry.hourlyExport || res.withBatt.hourly.map(h => h.gridExport);
 
@@ -166,7 +165,7 @@ function renderSocChart(res) {
 }
 
 // ============================================================
-// EXPORT PDF MIS À JOUR
+// EXPORT PDF
 // ============================================================
 function exportPDF() {
   const { jsPDF } = window.jspdf;
@@ -198,7 +197,6 @@ function exportPDF() {
     y += 7;
   });
 
-  // Export des graphiques en images
   y += 5;
   if (chartRawInstance) {
     doc.text("1. Flux d'origine mesurés :", 20, y);
