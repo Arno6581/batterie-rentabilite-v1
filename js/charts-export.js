@@ -1,14 +1,12 @@
-// Instances de graphiques (Scope global window)
 window.chartRawInstance = window.chartRawInstance || null;
 window.chartConsInstance = window.chartConsInstance || null;
 window.chartSimInstance = window.chartSimInstance || null;
 window.chartSocInstance = window.chartSocInstance || null;
 
-// Création de 96 étiquettes (15-min intervals)
 const chartLabels = Array.from({length: 96}, (_, i) => {
   const h = Math.floor(i / 4);
   const m = (i % 4) * 15;
-  return m === 0 ? h + 'h' : ''; // Affiche uniquement l'heure pile pour ne pas surcharger l'axe
+  return m === 0 ? h + 'h' : '';
 });
 
 const commonChartOptions = {
@@ -21,12 +19,16 @@ const commonChartOptions = {
   },
   scales: {
     x: { ticks: { color: '#9ca3af' }, grid: { color: '#2d3142' } },
-    y: { ticks: { color: '#9ca3af' }, grid: { color: '#2d3142' } }
+    y: { 
+      title: { display: true, text: 'Puissance (kW)', color: '#9ca3af' }, // Correction Unité: kW
+      ticks: { color: '#9ca3af' }, 
+      grid: { color: '#2d3142' } 
+    }
   }
 };
 
 // ============================================================
-// 1. CHART RAW : MESURES BRUTES (P1 & PV)
+// 1. CHART RAW : MESURES BRUTES (P1 & PV en kW)
 // ============================================================
 function renderRawChart(res) {
   const ctx = document.getElementById('chartRaw').getContext('2d');
@@ -35,14 +37,19 @@ function renderRawChart(res) {
   const rawImport = res.entry.hourlyImport || res.withBatt.hourly.map(h => h.gridImport);
   const rawExport = res.entry.hourlyExport || res.withBatt.hourly.map(h => h.gridExport);
 
+  // Conversion Énergie 15min (kWh) -> Puissance (kW) : multiplication par 4
+  const pvPower = res.productionCurve.map(v => v * 4);
+  const importPower = rawImport.map(v => v * 4);
+  const exportPower = rawExport.map(v => v * 4);
+
   window.chartRawInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels: chartLabels,
       datasets: [
         {
-          label: 'Production PV (kWh)',
-          data: res.productionCurve,
+          label: 'Production PV (kW)',
+          data: pvPower,
           borderColor: '#fbbf24',
           backgroundColor: 'rgba(251,191,36,0.08)',
           fill: true,
@@ -50,8 +57,8 @@ function renderRawChart(res) {
           pointRadius: 0
         },
         {
-          label: 'Import Réseau P1 (kWh)',
-          data: rawImport,
+          label: 'Import Réseau P1 (kW)',
+          data: importPower,
           borderColor: '#9d4edd',
           backgroundColor: 'rgba(157,78,221,0.08)',
           fill: true,
@@ -59,8 +66,8 @@ function renderRawChart(res) {
           pointRadius: 0
         },
         {
-          label: 'Injection Réseau P1 (kWh)',
-          data: rawExport,
+          label: 'Injection Réseau P1 (kW)',
+          data: exportPower,
           borderColor: '#2ec4b6',
           backgroundColor: 'rgba(46,196,182,0.08)',
           fill: true,
@@ -74,19 +81,21 @@ function renderRawChart(res) {
 }
 
 // ============================================================
-// 2. CHART CONS : PROFILE DE CONSOMMATION HABITATION
+// 2. CHART CONS : PROFILE DE CONSOMMATION HABITATION (kW)
 // ============================================================
 function renderConsChart(res) {
   const ctx = document.getElementById('chartCons').getContext('2d');
   if (window.chartConsInstance) window.chartConsInstance.destroy();
+
+  const consPower = res.consumptionCurve.map(v => v * 4);
 
   window.chartConsInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels: chartLabels,
       datasets: [{
-        label: 'Consommation Totale Maison (kWh)',
-        data: res.consumptionCurve,
+        label: 'Consommation Totale Maison (kW)',
+        data: consPower,
         borderColor: '#f87171',
         backgroundColor: 'rgba(248,113,113,0.15)',
         fill: true,
@@ -99,11 +108,14 @@ function renderConsChart(res) {
 }
 
 // ============================================================
-// 3. CHART SIM : IMPACT DE LA BATTERIE SUR LES FLUX
+// 3. CHART SIM : IMPACT DE LA BATTERIE SUR LES FLUX (kW)
 // ============================================================
 function renderSimChart(res) {
   const ctx = document.getElementById('chartSim').getContext('2d');
   if (window.chartSimInstance) window.chartSimInstance.destroy();
+
+  const consPower = res.consumptionCurve.map(v => v * 4);
+  const importWithBatteryPower = res.withBatt.hourly.map(h => h.gridImport * 4);
 
   window.chartSimInstance = new Chart(ctx, {
     type: 'line',
@@ -111,8 +123,8 @@ function renderSimChart(res) {
       labels: chartLabels,
       datasets: [
         {
-          label: 'Consommation Initiale (kWh)',
-          data: res.consumptionCurve,
+          label: 'Consommation Initiale (kW)',
+          data: consPower,
           borderColor: '#f87171',
           borderDash: [5, 5],
           fill: false,
@@ -120,8 +132,8 @@ function renderSimChart(res) {
           pointRadius: 0
         },
         {
-          label: 'Nouvel Import Réseau avec Batterie (kWh)',
-          data: res.withBatt.hourly.map(h => h.gridImport),
+          label: 'Nouvel Import Réseau avec Batterie (kW)',
+          data: importWithBatteryPower,
           borderColor: '#60a5fa',
           backgroundColor: 'rgba(96,165,250,0.2)',
           fill: true,
@@ -135,7 +147,7 @@ function renderSimChart(res) {
 }
 
 // ============================================================
-// 4. CHART SOC : NIVEAU DE CHARGE BATTERIE (SoC)
+// 4. CHART SOC : NIVEAU DE CHARGE BATTERIE (SoC - kWh)
 // ============================================================
 function renderSocChart(res) {
   const ctx = document.getElementById('chartSoc').getContext('2d');
@@ -150,7 +162,7 @@ function renderSocChart(res) {
     data: {
       labels: chartLabels,
       datasets: [{
-        label: 'Niveau de charge (kWh)',
+        label: 'Niveau de charge (kWh)', // Reste en kWh (Capacité d'énergie de la batterie)
         data: res.withBatt.socHistory,
         borderColor: '#4ade80',
         backgroundColor: 'rgba(74,222,128,0.15)',
@@ -164,6 +176,7 @@ function renderSocChart(res) {
       scales: {
         x: { ticks: { color: '#9ca3af' }, grid: { color: '#2d3142' } },
         y: {
+          title: { display: true, text: 'Niveau d\'énergie (kWh)', color: '#9ca3af' },
           ticks: { color: '#9ca3af' },
           grid: { color: '#2d3142' },
           min: 0,
