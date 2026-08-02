@@ -304,16 +304,22 @@ tr:hover {
   margin-top: 4px;
 }
 
-canvas {
-  width: 100% !important;
-  height: 300px !important;
-  max-height: 350px;
+/* CONTENEUR DE GRAPHIQUE CORRIGÉ */
+.chart-container {
+  position: relative;
+  height: 320px;
+  width: 100%;
   margin-top: 12px;
   background: #12141c;
-  border-radius: 6px;
-  padding: 8px;
+  border-radius: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
 }
 
+canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
 
 .import-section {
   background: #12141c;
