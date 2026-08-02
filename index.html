@@ -40,6 +40,11 @@
       <input type="text" id="profileName" placeholder="Ex: Famille Parlante">
       <button class="btn" onclick="saveCurrentProfile()">💾 Sauvegarder ce profil</button>
       <button class="btn secondary" onclick="newProfile()">➕ Nouveau profil vierge</button>
+      <h3 style="margin-top:24px; color:var(--accent2);">Données en mémoire</h3>
+      <p style="color:var(--muted); font-size:0.85rem; margin-top:8px;">Les relevés P1 et offres batterie sont sauvegardés automatiquement et persistent même après fermeture.</p>
+      <button class="btn secondary" onclick="clearP1Entries()" style="margin-top:12px;">🗑️ Vider les P1 enregistrées</button>
+      <button class="btn secondary" onclick="clearBatteryOffers()" style="margin-top:12px;">🗑️ Vider les offres batterie</button>
+
     </div>
   </div>
 
