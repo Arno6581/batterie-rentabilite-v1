@@ -40,11 +40,11 @@
       <input type="text" id="profileName" placeholder="Ex: Famille Parlante">
       <button class="btn" onclick="saveCurrentProfile()">💾 Sauvegarder ce profil</button>
       <button class="btn secondary" onclick="newProfile()">➕ Nouveau profil vierge</button>
+      
       <h3 style="margin-top:24px; color:var(--accent2);">Données en mémoire</h3>
       <p style="color:var(--muted); font-size:0.85rem; margin-top:8px;">Les relevés P1 et offres batterie sont sauvegardés automatiquement et persistent même après fermeture.</p>
       <button class="btn secondary" onclick="clearP1Entries()" style="margin-top:12px;">🗑️ Vider les P1 enregistrées</button>
       <button class="btn secondary" onclick="clearBatteryOffers()" style="margin-top:12px;">🗑️ Vider les offres batterie</button>
-
     </div>
   </div>
 
@@ -202,19 +202,27 @@
 
         <h3 style="margin-top:24px;">📊 1. Mesures d'origine (Réseau P1 & Production PV)</h3>
         <p style="color:var(--muted); font-size:0.8rem; margin-bottom:10px;">Visualisation des flux bruts mesurés par le compteur intelligent et l'onduleur avant simulation.</p>
-        <canvas id="chartRaw"></canvas>
+        <div class="chart-container">
+          <canvas id="chartRaw"></canvas>
+        </div>
 
         <h3 style="margin-top:32px;">📈 2. Profil de Consommation de la Maison</h3>
-        <p style="color:var(--muted); font-size:0.8rem; margin-bottom:10px;">Consommation totale calculée de l'habitation (Production + Import - Export). Les pics d'équipements y sont visibles.</p>
-        <canvas id="chartCons"></canvas>
+        <p style="color:var(--muted); font-size:0.8rem; margin-bottom:10px;">Consommation totale calculée de l'habitation (Production + Import - Export).</p>
+        <div class="chart-container">
+          <canvas id="chartCons"></canvas>
+        </div>
 
         <h3 style="margin-top:32px;">🔋 3. Impact de la Batterie sur l'Import Réseau</h3>
         <p style="color:var(--muted); font-size:0.8rem; margin-bottom:10px;">Comparatif de ce que vous devez encore acheter au réseau avec la batterie active (zone bleue) par rapport à votre consommation (zone rouge).</p>
-        <canvas id="chartSim"></canvas>
+        <div class="chart-container">
+          <canvas id="chartSim"></canvas>
+        </div>
 
         <h3 style="margin-top:32px;">⚡ 4. Niveau de Charge de la Batterie (SoC)</h3>
-        <p style="color:var(--muted); font-size:0.8rem; margin-bottom:10px;">Cycle de charge (journée avec surplus solaire) et décharge (soirée/nuit) de la batterie de stockage.</p>
-        <canvas id="chartSoc"></canvas>
+        <p style="color:var(--muted); font-size:0.8rem; margin-bottom:10px;">Cycle de charge et décharge de la batterie de stockage.</p>
+        <div class="chart-container">
+          <canvas id="chartSoc"></canvas>
+        </div>
       </div>
     </div>
 
