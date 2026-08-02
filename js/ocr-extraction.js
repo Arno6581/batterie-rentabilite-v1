@@ -34,12 +34,19 @@ function loadImageToCanvas(file){
 }
 
 // ============================================================
-// EXTRACT HOMEWIZARD CURVE (P1 Import/Export en W)
+// EXTRACT HOMEWIZARD CURVE (P1 Import/Export en W - 96 points)
 // ============================================================
 
 async function extractHomeWizardCurve(canvasData){
   const { ctx, width, height } = canvasData;
-  const bounds = HOMEWIZARD_CHART_BOUNDS;
+  
+  // Correction des coordonnées de scan vertical (cible le graphique noir du bas)
+  const bounds = {
+    xStart: 0.05, xEnd: 0.95,
+    yTop: 0.52, yBottom: 0.81, // Vise précisément le graphique dans le bas du screenshot
+    valueTop: 2000,
+    valueBottom: -4000
+  };
 
   const xPixelStart = Math.floor(width * bounds.xStart);
   const xPixelEnd = Math.floor(width * bounds.xEnd);
@@ -49,16 +56,17 @@ async function extractHomeWizardCurve(canvasData){
   const chartWidthPx = xPixelEnd - xPixelStart;
   const chartHeightPx = yPixelBottom - yPixelTop;
 
-  let hourlyImportW = new Array(24).fill(0);
-  let hourlyExportW = new Array(24).fill(0);
-  let hourlySamples = new Array(24).fill(0);
+  let importSums = new Array(96).fill(0);
+  let importCounts = new Array(96).fill(0);
+  let exportSums = new Array(96).fill(0);
+  let exportCounts = new Array(96).fill(0);
 
   const imageData = ctx.getImageData(xPixelStart, yPixelTop, chartWidthPx, chartHeightPx);
   const data = imageData.data;
 
   for(let x = 0; x < chartWidthPx; x++){
-    const hourIndex = Math.floor((x / chartWidthPx) * 24);
-    if(hourIndex < 0 || hourIndex >= 24) continue;
+    const timeIndex = Math.floor((x / chartWidthPx) * 96);
+    if(timeIndex < 0 || timeIndex >= 96) continue;
 
     let purpleY = null;
     let greenY = null;
@@ -69,10 +77,11 @@ async function extractHomeWizardCurve(canvasData){
       const g = data[idx + 1];
       const b = data[idx + 2];
 
-      if(colorMatch(r, g, b, COLOR_PURPLE) && purpleY === null){
+      // Détecteurs de couleur robustes (anti-compression)
+      if(r > 110 && b > 160 && g < 120 && purpleY === null){
         purpleY = y;
       }
-      if(colorMatch(r, g, b, COLOR_GREEN_HW) && greenY === null){
+      if(g > 150 && r < 100 && b < 160 && greenY === null){
         greenY = y;
       }
     }
@@ -85,37 +94,45 @@ async function extractHomeWizardCurve(canvasData){
     if(purpleY !== null){
       const val = yToValue(purpleY);
       if(val > 0){
-        hourlyImportW[hourIndex] += val;
-        hourlySamples[hourIndex]++;
+        importSums[timeIndex] += val;
+        importCounts[timeIndex]++;
       }
     }
 
     if(greenY !== null){
       const val = yToValue(greenY);
       if(val < 0){
-        hourlyExportW[hourIndex] += Math.abs(val);
-        hourlySamples[hourIndex]++;
+        exportSums[timeIndex] += Math.abs(val);
+        exportCounts[timeIndex]++;
       }
     }
   }
 
-  let hourlyImportKWh = hourlyImportW.map((v, i) =>
-    hourlySamples[i] > 0 ? (v / hourlySamples[i]) / 1000 : 0
+  // Conversion en kWh pour l'intervalle de 15 minutes (Puissance moyenne * 0.25h / 1000)
+  let hourlyImportKWh = importSums.map((sum, i) =>
+    importCounts[i] > 0 ? (sum / importCounts[i]) * 0.25 / 1000 : 0
   );
-  let hourlyExportKWh = hourlyExportW.map((v, i) =>
-    hourlySamples[i] > 0 ? (v / hourlySamples[i]) / 1000 : 0
+  let hourlyExportKWh = exportSums.map((sum, i) =>
+    exportCounts[i] > 0 ? (sum / exportCounts[i]) * 0.25 / 1000 : 0
   );
 
   return { hourlyImportKWh, hourlyExportKWh };
 }
 
 // ============================================================
-// EXTRACT SOLAREDGE CURVE (Production en kW)
+// EXTRACT SOLAREDGE CURVE (Production en kW - 96 points)
 // ============================================================
 
 async function extractSolarEdgeCurve(canvasData){
   const { ctx, width, height } = canvasData;
-  const bounds = SOLAREDGE_CHART_BOUNDS;
+  
+  // Zone ajustée pour une capture d'écran recadrée
+  const bounds = {
+    xStart: 0.08, xEnd: 0.98,
+    yTop: 0.35, yBottom: 0.90,
+    valueTop: 3.5,
+    valueBottom: 0
+  };
 
   const xPixelStart = Math.floor(width * bounds.xStart);
   const xPixelEnd = Math.floor(width * bounds.xEnd);
@@ -125,15 +142,18 @@ async function extractSolarEdgeCurve(canvasData){
   const chartWidthPx = xPixelEnd - xPixelStart;
   const chartHeightPx = yPixelBottom - yPixelTop;
 
-  let hourlyProductionKW = new Array(24).fill(0);
-  let hourlySamples = new Array(24).fill(0);
+  let prodSums = new Array(96).fill(0);
+  let prodCounts = new Array(96).fill(0);
 
   const imageData = ctx.getImageData(xPixelStart, yPixelTop, chartWidthPx, chartHeightPx);
   const data = imageData.data;
 
   for(let x = 0; x < chartWidthPx; x++){
-    const hourIndex = Math.floor((x / chartWidthPx) * 24);
-    if(hourIndex < 0 || hourIndex >= 24) continue;
+    // Alignement temporel : Le graphique SolarEdge s'étend environ de 05h30 à 20h30 (15h de large)
+    const ratio = x / chartWidthPx;
+    const hour = 5.5 + ratio * (20.5 - 5.5);
+    const timeIndex = Math.floor(hour * 4);
+    if(timeIndex < 0 || timeIndex >= 96) continue;
 
     let greenTopY = null;
 
@@ -143,22 +163,23 @@ async function extractSolarEdgeCurve(canvasData){
       const g = data[idx + 1];
       const b = data[idx + 2];
 
-      if(colorMatch(r, g, b, COLOR_GREEN_SE)){
+      if(g > 150 && r < 120 && b < 160){
         greenTopY = y;
         break;
       }
     }
 
     if(greenTopY !== null){
-      const ratio = greenTopY / chartHeightPx;
-      const value = bounds.valueTop - ratio * (bounds.valueTop - bounds.valueBottom);
-      hourlyProductionKW[hourIndex] += Math.max(0, value);
-      hourlySamples[hourIndex]++;
+      const ratioY = greenTopY / chartHeightPx;
+      const value = bounds.valueTop - ratioY * (bounds.valueTop - bounds.valueBottom);
+      prodSums[timeIndex] += Math.max(0, value);
+      prodCounts[timeIndex]++;
     }
   }
 
-  let hourlyProductionKWh = hourlyProductionKW.map((v, i) =>
-    hourlySamples[i] > 0 ? v / hourlySamples[i] : 0
+  // Énergie produite sur l'intervalle de 15 min (Puissance kW * 0.25h)
+  let hourlyProductionKWh = prodSums.map((sum, i) =>
+    prodCounts[i] > 0 ? (sum / prodCounts[i]) * 0.25 : 0
   );
 
   return { hourlyProductionKWh };
@@ -244,7 +265,6 @@ function extractDateFromText(text){
     return d.toISOString().split('T')[0];
   }
 
-  // 1. Format numérique explicite (ex: 31/07/2026 ou 31-07-26)
   const numericDate = clean.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})?/);
   if(numericDate){
     const day = parseInt(numericDate[1]);
@@ -256,7 +276,6 @@ function extractDateFromText(text){
     }
   }
 
-  // 2. Format textuel (ex: "Fri 31 Jul" ou "ven. 31 juil.")
   const months = {
     jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11,
     janv:0, févr:1, mars:2, avr:3, mai:4, juin:5, juil:6, août:7, sept:8, octo:9, nov:10, déc:11,
@@ -302,7 +321,7 @@ async function handleP1Image(event){
     window.lastP1Curve = curve;
 
     document.getElementById('p1Status').innerHTML =
-      `<span style="color:var(--accent);">✓ OCR réussi — Grid: ${grid ?? '?'} kWh, Surplus: ${surplus ?? '?'} kWh, Date: ${date} (Vérifiable ci-dessous)</span>`;
+      `<span style="color:var(--accent);">✓ OCR réussi — Grid: ${grid ?? '?'} kWh, Surplus: ${surplus ?? '?'} kWh, Date: ${date}</span>`;
 
   } catch(e){
     document.getElementById('p1Status').innerHTML =
@@ -337,7 +356,7 @@ async function handlePVImage(event){
     }
 
     document.getElementById('pvStatus').innerHTML =
-      `<span style="color:var(--accent);">✓ OCR réussi — Production: ${production ?? '?'} kWh, Date: ${date} (Vérifiable ci-dessous)</span>`;
+      `<span style="color:var(--accent);">✓ OCR réussi — Production: ${production ?? '?'} kWh, Date: ${date}</span>`;
 
   } catch(e){
     document.getElementById('pvStatus').innerHTML =
