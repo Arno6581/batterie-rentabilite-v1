@@ -20,7 +20,7 @@ const commonChartOptions = {
   scales: {
     x: { ticks: { color: '#9ca3af' }, grid: { color: '#2d3142' } },
     y: { 
-      title: { display: true, text: 'Puissance (kW)', color: '#9ca3af' }, // Correction Unité: kW
+      title: { display: true, text: 'Puissance (kW)', color: '#9ca3af' },
       ticks: { color: '#9ca3af' }, 
       grid: { color: '#2d3142' } 
     }
@@ -162,7 +162,7 @@ function renderSocChart(res) {
     data: {
       labels: chartLabels,
       datasets: [{
-        label: 'Niveau de charge (kWh)', // Reste en kWh (Capacité d'énergie de la batterie)
+        label: 'Niveau de charge (kWh)',
         data: res.withBatt.socHistory,
         borderColor: '#4ade80',
         backgroundColor: 'rgba(74,222,128,0.15)',
