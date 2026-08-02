@@ -1,17 +1,37 @@
 // ============================================================
-// COLOR MATCHING UTILITY
+// CONVERTISSEUR RGB -> HSL (Ultra-robuste pour la détection de couleurs)
 // ============================================================
+function rgbToHsl(r, g, b){
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
 
-function colorMatch(r, g, b, target){
-  return Math.abs(r - target.r) < target.tolerance &&
-         Math.abs(g - target.g) < target.tolerance &&
-         Math.abs(b - target.b) < target.tolerance;
+  if(max === min){
+    h = s = 0; // achromatique
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch(max){
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 };
+}
+
+function isPurpleHSL(hsl){
+  return hsl.h >= 240 && hsl.h <= 315 && hsl.s > 25 && hsl.l > 15 && hsl.l < 85;
+}
+
+function isGreenHSL(hsl){
+  return hsl.h >= 95 && hsl.h <= 165 && hsl.s > 25 && hsl.l > 15 && hsl.l < 85;
 }
 
 // ============================================================
 // CANVAS LOADING
 // ============================================================
-
 function loadImageToCanvas(file){
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -36,79 +56,97 @@ function loadImageToCanvas(file){
 // ============================================================
 // EXTRACT HOMEWIZARD CURVE (P1 Import/Export en W - 96 points)
 // ============================================================
-
 async function extractHomeWizardCurve(canvasData){
   const { ctx, width, height } = canvasData;
-  
-  // Correction des coordonnées de scan vertical (cible le graphique noir du bas)
-  const bounds = {
-    xStart: 0.05, xEnd: 0.95,
-    yTop: 0.52, yBottom: 0.81, // Vise précisément le graphique dans le bas du screenshot
-    valueTop: 2000,
-    valueBottom: -4000
-  };
+  const fullImageData = ctx.getImageData(0, 0, width, height);
+  const data = fullImageData.data;
 
-  const xPixelStart = Math.floor(width * bounds.xStart);
-  const xPixelEnd = Math.floor(width * bounds.xEnd);
-  const yPixelTop = Math.floor(height * bounds.yTop);
-  const yPixelBottom = Math.floor(height * bounds.yBottom);
+  // 1. AUTO-CALIBRATION DE LA GRILLE (Cherche les lignes de grille grises horizontales)
+  let gridLinesY = [];
+  let xStart = Math.floor(width * 0.05);
+  let xEnd = Math.floor(width * 0.95);
 
-  const chartWidthPx = xPixelEnd - xPixelStart;
-  const chartHeightPx = yPixelBottom - yPixelTop;
+  const scanYStart = Math.floor(height * 0.45);
+  const scanYEnd = Math.floor(height * 0.88);
+
+  for(let y = scanYStart; y < scanYEnd; y++){
+    let grayCount = 0;
+    let firstGrayX = null;
+    let lastGrayX = null;
+
+    for(let x = Math.floor(width * 0.05); x < Math.floor(width * 0.95); x++){
+      const idx = (y * width + x) * 4;
+      const r = data[idx], g = data[idx+1], b = data[idx+2];
+      
+      // Filtre gris de grille
+      if(Math.abs(r - g) < 5 && Math.abs(g - b) < 5 && r > 30 && r < 80){
+        grayCount++;
+        if(firstGrayX === null) firstGrayX = x;
+        lastGrayX = x;
+      }
+    }
+    // Si la ligne contient une longue ligne grise continue, c'est une ligne de grille !
+    if(grayCount > (width * 0.5)){
+      if(gridLinesY.length === 0 || y - gridLinesY[gridLinesY.length - 1].y > 15){
+        gridLinesY.push({ y, xStart: firstGrayX, xEnd: lastGrayX });
+      }
+    }
+  }
+
+  // Fallback si la détection dynamique échoue (aspect-ratio standard)
+  let yTop = Math.floor(height * 0.53);
+  let yBottom = Math.floor(height * 0.81);
+
+  if(gridLinesY.length >= 2){
+    xStart = gridLinesY[0].xStart;
+    xEnd = gridLinesY[0].xEnd;
+    // Si on trouve les 4 lignes de grille (+2000, 0, -2000, -4000)
+    if(gridLinesY.length === 4){
+      yTop = gridLinesY[0].y;
+      yBottom = gridLinesY[3].y;
+    } else {
+      yTop = gridLinesY[0].y;
+      yBottom = gridLinesY[gridLinesY.length - 1].y;
+    }
+  }
+
+  const chartWidthPx = xEnd - xStart;
+  const chartHeightPx = yBottom - yTop;
 
   let importSums = new Array(96).fill(0);
   let importCounts = new Array(96).fill(0);
   let exportSums = new Array(96).fill(0);
   let exportCounts = new Array(96).fill(0);
 
-  const imageData = ctx.getImageData(xPixelStart, yPixelTop, chartWidthPx, chartHeightPx);
-  const data = imageData.data;
-
-  for(let x = 0; x < chartWidthPx; x++){
-    const timeIndex = Math.floor((x / chartWidthPx) * 96);
+  // 2. SCAN PIXEL PAR PIXEL EN UTILISANT HSL
+  for(let x = xStart; x < xEnd; x++){
+    const timeIndex = Math.floor(((x - xStart) / chartWidthPx) * 96);
     if(timeIndex < 0 || timeIndex >= 96) continue;
 
-    let purpleY = null;
-    let greenY = null;
+    for(let y = yTop; y < yBottom; y++){
+      const idx = (y * width + x) * 4;
+      const r = data[idx], g = data[idx+1], b = data[idx+2];
+      const hsl = rgbToHsl(r, g, b);
 
-    for(let y = 0; y < chartHeightPx; y++){
-      const idx = (y * chartWidthPx + x) * 4;
-      const r = data[idx];
-      const g = data[idx + 1];
-      const b = data[idx + 2];
+      const ratioY = (y - yTop) / chartHeightPx;
+      const powerVal = 2000 - ratioY * 6000; // Échelle de +2000W à -4000W
 
-      // Détecteurs de couleur robustes (anti-compression)
-      if(r > 110 && b > 160 && g < 120 && purpleY === null){
-        purpleY = y;
+      if(isPurpleHSL(hsl)){
+        if(powerVal > 0){
+          importSums[timeIndex] += powerVal;
+          importCounts[timeIndex]++;
+        }
       }
-      if(g > 150 && r < 100 && b < 160 && greenY === null){
-        greenY = y;
-      }
-    }
-
-    const yToValue = (yPos) => {
-      const ratio = yPos / chartHeightPx;
-      return bounds.valueTop + ratio * (bounds.valueBottom - bounds.valueTop);
-    };
-
-    if(purpleY !== null){
-      const val = yToValue(purpleY);
-      if(val > 0){
-        importSums[timeIndex] += val;
-        importCounts[timeIndex]++;
-      }
-    }
-
-    if(greenY !== null){
-      const val = yToValue(greenY);
-      if(val < 0){
-        exportSums[timeIndex] += Math.abs(val);
-        exportCounts[timeIndex]++;
+      if(isGreenHSL(hsl)){
+        if(powerVal < 0){
+          exportSums[timeIndex] += Math.abs(powerVal);
+          exportCounts[timeIndex]++;
+        }
       }
     }
   }
 
-  // Conversion en kWh pour l'intervalle de 15 minutes (Puissance moyenne * 0.25h / 1000)
+  // Conversion en kWh sur l'intervalle de 15 min (W * 0.25h / 1000)
   let hourlyImportKWh = importSums.map((sum, i) =>
     importCounts[i] > 0 ? (sum / importCounts[i]) * 0.25 / 1000 : 0
   );
@@ -122,62 +160,56 @@ async function extractHomeWizardCurve(canvasData){
 // ============================================================
 // EXTRACT SOLAREDGE CURVE (Production en kW - 96 points)
 // ============================================================
-
 async function extractSolarEdgeCurve(canvasData){
   const { ctx, width, height } = canvasData;
-  
-  // Zone ajustée pour une capture d'écran recadrée
+  const fullImageData = ctx.getImageData(0, 0, width, height);
+  const data = fullImageData.data;
+
+  // Détection des limites du graphique SolarEdge
   const bounds = {
-    xStart: 0.08, xEnd: 0.98,
-    yTop: 0.35, yBottom: 0.90,
-    valueTop: 3.5,
+    xStart: Math.floor(width * 0.08),
+    xEnd: Math.floor(width * 0.98),
+    yTop: Math.floor(height * 0.35),
+    yBottom: Math.floor(height * 0.90),
+    valueTop: 3.5, // Puissance max en haut de l'échelle (kW)
     valueBottom: 0
   };
 
-  const xPixelStart = Math.floor(width * bounds.xStart);
-  const xPixelEnd = Math.floor(width * bounds.xEnd);
-  const yPixelTop = Math.floor(height * bounds.yTop);
-  const yPixelBottom = Math.floor(height * bounds.yBottom);
-
-  const chartWidthPx = xPixelEnd - xPixelStart;
-  const chartHeightPx = yPixelBottom - yPixelTop;
+  const chartWidthPx = bounds.xEnd - bounds.xStart;
+  const chartHeightPx = bounds.yBottom - bounds.yTop;
 
   let prodSums = new Array(96).fill(0);
   let prodCounts = new Array(96).fill(0);
 
-  const imageData = ctx.getImageData(xPixelStart, yPixelTop, chartWidthPx, chartHeightPx);
-  const data = imageData.data;
-
-  for(let x = 0; x < chartWidthPx; x++){
-    // Alignement temporel : Le graphique SolarEdge s'étend environ de 05h30 à 20h30 (15h de large)
-    const ratio = x / chartWidthPx;
-    const hour = 5.5 + ratio * (20.5 - 5.5);
-    const timeIndex = Math.floor(hour * 4);
+  for(let x = bounds.xStart; x < bounds.xEnd; x++){
+    // Alignement temporel : Le graphique SolarEdge couvre environ de 05h30 à 20h30 (soit 15 heures)
+    const ratioX = (x - bounds.xStart) / chartWidthPx;
+    const hour = 5.5 + ratioX * 15; // Mappe de 05:30 à 20:30
+    const timeIndex = Math.floor(hour * 4); // Convertit en index de 15 minutes (0-95)
     if(timeIndex < 0 || timeIndex >= 96) continue;
 
     let greenTopY = null;
 
-    for(let y = 0; y < chartHeightPx; y++){
-      const idx = (y * chartWidthPx + x) * 4;
-      const r = data[idx];
-      const g = data[idx + 1];
-      const b = data[idx + 2];
+    for(let y = bounds.yTop; y < bounds.yBottom; y++){
+      const idx = (y * width + x) * 4;
+      const r = data[idx], g = data[idx+1], b = data[idx+2];
+      const hsl = rgbToHsl(r, g, b);
 
-      if(g > 150 && r < 120 && b < 160){
+      if(isGreenHSL(hsl)){
         greenTopY = y;
-        break;
+        break; // Premier pixel vert rencontré en partant du haut = haut de la courbe
       }
     }
 
     if(greenTopY !== null){
-      const ratioY = greenTopY / chartHeightPx;
-      const value = bounds.valueTop - ratioY * (bounds.valueTop - bounds.valueBottom);
-      prodSums[timeIndex] += Math.max(0, value);
+      const ratioY = (greenTopY - bounds.yTop) / chartHeightPx;
+      const kWValue = bounds.valueTop - ratioY * 3.5;
+      prodSums[timeIndex] += Math.max(0, kWValue);
       prodCounts[timeIndex]++;
     }
   }
 
-  // Énergie produite sur l'intervalle de 15 min (Puissance kW * 0.25h)
+  // Énergie sur 15 min (kW * 0.25h)
   let hourlyProductionKWh = prodSums.map((sum, i) =>
     prodCounts[i] > 0 ? (sum / prodCounts[i]) * 0.25 : 0
   );
@@ -186,9 +218,8 @@ async function extractSolarEdgeCurve(canvasData){
 }
 
 // ============================================================
-// OCR EXECUTION
+// OCR & DATES (Inchangés mais conservés pour intégrité)
 // ============================================================
-
 async function runOCR(file){
   try {
     const result = await Tesseract.recognize(file, 'eng+fra');
@@ -198,10 +229,6 @@ async function runOCR(file){
     throw new Error("Erreur OCR: " + e.message);
   }
 }
-
-// ============================================================
-// ROBUST HOMEWIZARD EXTRACTOR (GRID vs SURPLUS)
-// ============================================================
 
 function extractHomeWizardValues(text){
   const clean = text.toLowerCase().replace(/\s+/g, ' ');
@@ -251,10 +278,6 @@ function extractSolarEdgeProduction(text){
   return fallback ? parseFloat(fallback[1].replace(',', '.')) : null;
 }
 
-// ============================================================
-// ULTRA-ROBUST DATE EXTRACTOR
-// ============================================================
-
 function extractDateFromText(text){
   const today = new Date();
   const clean = text.toLowerCase();
@@ -296,10 +319,6 @@ function extractDateFromText(text){
 
   return today.toISOString().split('T')[0];
 }
-
-// ============================================================
-// IMAGE UPLOAD HANDLERS
-// ============================================================
 
 async function handleP1Image(event){
   const file = event.target.files[0];
