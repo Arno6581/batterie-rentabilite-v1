@@ -114,6 +114,11 @@ function syncProfileToForm(){
 
   refreshP1Table();
   refreshBattTable();
+
+  loadP1Entries();
+  loadBatteryOffers();
+  refreshP1Table();
+  refreshBattTable();
 }
 
 // ============================================================
@@ -216,8 +221,10 @@ function refreshP1Table(){
 
 function removeP1Entry(idx){
   currentProfile.p1Entries.splice(idx, 1);
+  saveP1Entries();  // AJOUT: sauvegarde automatique
   refreshP1Table();
 }
+
 
 function addP1Entry(){
   const date = document.getElementById('p1Date').value;
@@ -276,6 +283,7 @@ function addPVEntry(){
     alert("Production ajoutée comme nouvelle entrée.");
   }
 
+  saveP1Entries();  // AJOUT: sauvegarde automatique
   refreshP1Table();
   document.getElementById('pvTotal').value = '';
   window.lastPVCurve = null;
@@ -299,6 +307,7 @@ function addBatteryOffer(){
   }
 
   currentProfile.batteryOffers.push({ name, capacity, power, cost, efficiency });
+  saveBatteryOffers();  // AJOUT: sauvegarde automatique
   refreshBattTable();
   document.getElementById('battName').value = '';
   document.getElementById('battCapacity').value = '10';
@@ -306,6 +315,7 @@ function addBatteryOffer(){
   document.getElementById('battCost').value = '8000';
   document.getElementById('battEfficiency').value = '90';
 }
+
 
 function refreshBattTable(){
   const tbody = document.querySelector('#battTable tbody');
@@ -325,8 +335,10 @@ function refreshBattTable(){
 
 function removeBattOffer(idx){
   currentProfile.batteryOffers.splice(idx, 1);
+  saveBatteryOffers();  // AJOUT: sauvegarde automatique
   refreshBattTable();
 }
+
 
 // ============================================================
 // SIMULATION SELECTS REFRESH
@@ -352,3 +364,35 @@ function refreshSimulationSelects(){
     battSel.appendChild(opt);
   });
 }
+
+function addP1Entry(){
+  const date = document.getElementById('p1Date').value;
+  const grid = parseFloat(document.getElementById('p1Grid').value);
+  const surplus = parseFloat(document.getElementById('p1Surplus').value);
+
+  if(!date || isNaN(grid) || isNaN(surplus)){
+    alert("Merci de compléter date, Grid et Surplus.");
+    return;
+  }
+
+  const entry = {
+    date,
+    grid,
+    surplus,
+    pvProduction: null,
+    hourlyImport: window.lastP1Curve ? window.lastP1Curve.hourlyImportKWh : null,
+    hourlyExport: window.lastP1Curve ? window.lastP1Curve.hourlyExportKWh : null,
+    hourlyProduction: window.lastPVCurve ? window.lastPVCurve.hourlyProductionKWh : null
+  };
+
+  currentProfile.p1Entries.push(entry);
+  saveP1Entries();  // AJOUT: sauvegarde automatique
+  refreshP1Table();
+
+  document.getElementById('p1Grid').value = '';
+  document.getElementById('p1Surplus').value = '';
+  window.lastP1Curve = null;
+  window.lastPVCurve = null;
+  document.getElementById('p1Status').textContent = '';
+}
+
