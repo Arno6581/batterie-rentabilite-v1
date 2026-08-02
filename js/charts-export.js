@@ -1,243 +1,223 @@
-// ============================================================
-// ÉTAT GLOBAL & PROFIL PAR DÉFAUT
-// ============================================================
+// Instances globales pour éviter les conflits au re-rendu
+// Ces variables ne doivent être déclarées ICI et nulle part ailleurs
+if (typeof chartRawInstance === 'undefined') var chartRawInstance = null;
+if (typeof chartConsInstance === 'undefined') var chartConsInstance = null;
+if (typeof chartSimInstance === 'undefined') var chartSimInstance = null;
+if (typeof chartSocInstance === 'undefined') var chartSocInstance = null;
 
-let currentProfile = defaultProfile();
+const chartHours = Array.from({length: 24}, (_, h) => h + 'h');
 
-function defaultProfile(){
-  return {
-    name: "",
-    tariff: {
-      mode: "mono",
-      consumption: 0.369,
-      night: 0.20,
-      nightStart: "22:00",
-      nightEnd: "06:00",
-      injection: 0.0309
+// Options communes pour un design sombre et propre
+const commonChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      labels: { color: '#e5e7eb', font: { size: 11 } }
+    }
+  },
+  scales: {
+    x: { ticks: { color: '#9ca3af' }, grid: { color: '#2d3142' } },
+    y: { ticks: { color: '#9ca3af' }, grid: { color: '#2d3142' } }
+  }
+};
+
+// ============================================================
+// 1. CHART RAW : MESURES BRUTES (P1 & PV)
+// ============================================================
+function renderRawChart(res) {
+  const ctx = document.getElementById('chartRaw').getContext('2d');
+  if (chartRawInstance) chartRawInstance.destroy();
+
+  const rawImport = res.entry.hourlyImport || res.withBatt.hourly.map(h => h.gridImport);
+  const rawExport = res.entry.hourlyExport || res.withBatt.hourly.map(h => h.gridExport);
+
+  chartRawInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartHours,
+      datasets: [
+        {
+          label: 'Production PV (kWh)',
+          data: res.productionCurve,
+          borderColor: '#fbbf24',
+          backgroundColor: 'rgba(251,191,36,0.1)',
+          fill: true,
+          tension: 0.3
+        },
+        {
+          label: 'Import Réseau P1 (kWh)',
+          data: rawImport,
+          borderColor: '#9d4edd',
+          backgroundColor: 'rgba(157,78,221,0.1)',
+          fill: true,
+          tension: 0.3
+        },
+        {
+          label: 'Injection Réseau P1 (kWh)',
+          data: rawExport,
+          borderColor: '#2ec4b6',
+          backgroundColor: 'rgba(46,196,182,0.1)',
+          fill: true,
+          tension: 0.3
+        }
+      ]
     },
-    pvGroups: [
-      { panelPower: 320, panelCount: 4, tilt: 13, azimuth: 164 },
-      { panelPower: 320, panelCount: 11, tilt: 45, azimuth: 254 }
-    ],
-    equipment: {
-      washingMachine: { enabled: true, power: 2000, duration: 1.5, hour: 14 },
-      dishwasher: { enabled: true, power: 1500, duration: 2, hour: 13 },
-      dryer: { enabled: false, power: 2500, duration: 1.5, hour: 15 },
-      ac: [],
-      ev: { enabled: false, capacity: 60, power: 7.4, hour: 22, chargeAmount: 30 }
-    },
-    p1Entries: [],
-    batteryOffers: []
-  };
-}
-
-// ============================================================
-// PROFIL MANAGEMENT (localStorage)
-// ============================================================
-
-function getProfilesList(){
-  return JSON.parse(localStorage.getItem('battery_sim_profiles') || '{}');
-}
-
-function saveProfilesList(profiles){
-  localStorage.setItem('battery_sim_profiles', JSON.stringify(profiles));
-}
-
-function refreshProfileSelect(){
-  const profiles = getProfilesList();
-  const sel = document.getElementById('profileSelect');
-  sel.innerHTML = '<option value="">-- Sélectionner --</option>';
-  Object.keys(profiles).forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    sel.appendChild(opt);
+    options: commonChartOptions
   });
 }
 
-function saveCurrentProfile(){
-  syncFormToProfile();
-  const name = document.getElementById('profileName').value.trim();
-  if(!name){
-    alert("Merci d'indiquer un nom de profil.");
-    return;
-  }
-  currentProfile.name = name;
-  const profiles = getProfilesList();
-  profiles[name] = JSON.parse(JSON.stringify(currentProfile));
-  saveProfilesList(profiles);
-  refreshProfileSelect();
-  alert("Profil '" + name + "' sauvegardé.");
-}
+// ============================================================
+// 2. CHART CONS : PROFILE DE CONSOMMATION HABITATION
+// ============================================================
+function renderConsChart(res) {
+  const ctx = document.getElementById('chartCons').getContext('2d');
+  if (chartConsInstance) chartConsInstance.destroy();
 
-function loadSelectedProfile(){
-  const name = document.getElementById('profileSelect').value;
-  if(!name) return;
-  const profiles = getProfilesList();
-  currentProfile = JSON.parse(JSON.stringify(profiles[name]));
-  document.getElementById('profileName').value = name;
-  syncProfileToForm();
-  alert("Profil '" + name + "' chargé.");
-}
-
-function deleteSelectedProfile(){
-  const name = document.getElementById('profileSelect').value;
-  if(!name) return;
-  if(!confirm("Supprimer le profil '" + name + "' ?")) return;
-  const profiles = getProfilesList();
-  delete profiles[name];
-  saveProfilesList(profiles);
-  refreshProfileSelect();
-  alert("Profil supprimé.");
-}
-
-function newProfile(){
-  currentProfile = defaultProfile();
-  document.getElementById('profileName').value = '';
-  syncProfileToForm();
+  chartConsInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartHours,
+      datasets: [{
+        label: 'Consommation Totale Maison (kWh)',
+        data: res.consumptionCurve,
+        borderColor: '#f87171',
+        backgroundColor: 'rgba(248,113,113,0.15)',
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: commonChartOptions
+  });
 }
 
 // ============================================================
-// CONSTANTES DE MODÈLE SOLAIRE
+// 3. CHART SIM : IMPACT DE LA BATTERIE SUR LES FLUX
 // ============================================================
+function renderSimChart(res) {
+  const ctx = document.getElementById('chartSim').getContext('2d');
+  if (chartSimInstance) chartSimInstance.destroy();
 
-const MONTHLY_KWH_PER_KWC = [25, 45, 80, 110, 130, 135, 130, 115, 90, 60, 30, 20];
-const DAYLENGTH_BY_MONTH = [8, 9, 10, 10.5, 11, 11.5, 11.5, 11, 10, 9, 8, 7.5];
-
-// ============================================================
-// CONSTANTES OCR & EXTRACTION PIXEL
-// ============================================================
-
-const COLOR_PURPLE = { r: 155, g: 60, b: 200, tolerance: 45 };
-const COLOR_GREEN_HW = { r: 45, g: 200, b: 130, tolerance: 45 };
-const COLOR_GREEN_SE = { r: 40, g: 200, b: 110, tolerance: 45 };
-
-const HOMEWIZARD_CHART_BOUNDS = {
-  xStart: 0.05,
-  xEnd: 0.95,
-  yTop: 0.08,
-  yBottom: 0.75,
-  valueTop: 2000,
-  valueBottom: -4000
-};
-
-const SOLAREDGE_CHART_BOUNDS = {
-  xStart: 0.08,
-  xEnd: 0.98,
-  yTop: 0.15,
-  yBottom: 0.92,
-  valueTop: 3.5,
-  valueBottom: 0
-};
-
-// ============================================================
-// SIGNATURES D'ÉQUIPEMENTS (Pattern Recognition)
-// ============================================================
-
-const APPLIANCE_SIGNATURES = {
-  washingMachine: {
-    name: "Machine à laver",
-    powerRange: [1800, 2500],
-    durationRange: [60, 150],
-    pattern: "plateau_simple",
-    description: "Plateau élevé constant (chauffage eau) + oscillations (essorage)"
-  },
-  dishwasher: {
-    name: "Lave-vaisselle",
-    powerRange: [1500, 2200],
-    durationRange: [90, 200],
-    pattern: "double_pic",
-    description: "Pic début (chauffage) → creux → pic fin (séchage)"
-  },
-  dryer: {
-    name: "Sèche-linge",
-    powerRange: [2000, 2800],
-    durationRange: [50, 120],
-    pattern: "plateau_debut",
-    description: "Plateau élevé en début, puis décroissance progressive"
-  },
-  oven: {
-    name: "Four électrique",
-    powerRange: [2000, 3200],
-    durationRange: [20, 100],
-    pattern: "oscillant",
-    description: "Plateau avec oscillations régulières (thermostat)"
-  },
-  microwave: {
-    name: "Micro-ondes",
-    powerRange: [800, 1200],
-    durationRange: [2, 20],
-    pattern: "pic_court",
-    description: "Pic court et net"
-  }
-};
+  chartSimInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartHours,
+      datasets: [
+        {
+          label: 'Consommation Initiale (kWh)',
+          data: res.consumptionCurve,
+          borderColor: '#f87171',
+          borderDash: [5, 5],
+          fill: false,
+          tension: 0.3
+        },
+        {
+          label: 'Nouvel Import Réseau avec Batterie (kWh)',
+          data: res.withBatt.hourly.map(h => h.gridImport),
+          borderColor: '#60a5fa',
+          backgroundColor: 'rgba(96,165,250,0.2)',
+          fill: true,
+          tension: 0.3
+        }
+      ]
+    },
+    options: commonChartOptions
+  });
+}
 
 // ============================================================
-// HELPER: FORMES DE CONSOMMATION
+// 4. CHART SOC : NIVEAU DE CHARGE BATTERIE (SoC)
 // ============================================================
+function renderSocChart(res) {
+  const ctx = document.getElementById('chartSoc').getContext('2d');
+  if (chartSocInstance) chartSocInstance.destroy();
 
-function baseLoadShape(){
-  return [
-    0.3, 0.25, 0.2, 0.2, 0.2, 0.25, 0.4, 0.6,
-    0.5, 0.4, 0.4, 0.4, 0.45, 0.4, 0.4, 0.4,
-    0.45, 0.6, 0.9, 1.0, 0.9, 0.7, 0.5, 0.35
+  const battCapacity = currentProfile.batteryOffers[
+    document.getElementById('simBattSelect').value
+  ]?.capacity || 10;
+
+  chartSocInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartHours,
+      datasets: [{
+        label: 'Niveau de charge (kWh)',
+        data: res.withBatt.socHistory,
+        borderColor: '#4ade80',
+        backgroundColor: 'rgba(74,222,128,0.15)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 2
+      }]
+    },
+    options: {
+      ...commonChartOptions,
+      scales: {
+        x: { ticks: { color: '#9ca3af' }, grid: { color: '#2d3142' } },
+        y: {
+          ticks: { color: '#9ca3af' },
+          grid: { color: '#2d3142' },
+          min: 0,
+          max: battCapacity * 1.05
+        }
+      }
+    }
+  });
+}
+
+// ============================================================
+// EXPORT PDF
+// ============================================================
+function exportPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const profileName = currentProfile.name || "Sans nom";
+  const today = new Date().toLocaleDateString('fr-BE');
+
+  doc.setFontSize(16);
+  doc.text("📊 Rapport Simulation Batterie Domestique v1.1", 20, 20);
+
+  doc.setFontSize(10);
+  doc.setTextColor(150, 150, 150);
+  doc.text(`Profil: ${profileName} | Date: ${today}`, 20, 28);
+
+  let y = 40;
+  doc.setFontSize(11);
+  doc.setTextColor(50, 50, 50);
+
+  const results = [
+    ["Import réseau SANS batterie", document.getElementById('resGridWithout').textContent + " kWh"],
+    ["Import réseau AVEC batterie", document.getElementById('resGridWith').textContent + " kWh"],
+    ["Économie journalière", document.getElementById('resDailySavings').textContent],
+    ["Économie annuelle estimée", document.getElementById('resAnnualSavings').textContent],
+    ["Retour sur investissement", document.getElementById('resPayback').textContent]
   ];
-}
 
-// ============================================================
-// PERSISTENT STORAGE FOR P1 & BATTERY ENTRIES (auto-save)
-// ============================================================
+  results.forEach(([label, value]) => {
+    doc.text(`${label} : ${value}`, 20, y);
+    y += 7;
+  });
 
-function saveP1Entries(){
-  localStorage.setItem('battery_sim_p1_entries', JSON.stringify(currentProfile.p1Entries));
-}
-
-function loadP1Entries(){
-  const saved = localStorage.getItem('battery_sim_p1_entries');
-  if(saved){
-    try {
-      currentProfile.p1Entries = JSON.parse(saved);
-    } catch(e){
-      console.error('Erreur chargement P1 entries:', e);
-    }
+  y += 5;
+  if (chartRawInstance) {
+    doc.text("1. Flux d'origine mesurés :", 20, y);
+    doc.addImage(document.getElementById('chartRaw').toDataURL('image/png'), 'PNG', 20, y + 3, 170, 65);
+    y += 75;
   }
-}
 
-function saveBatteryOffers(){
-  localStorage.setItem('battery_sim_battery_offers', JSON.stringify(currentProfile.batteryOffers));
-}
+  doc.addPage();
+  y = 20;
 
-function loadBatteryOffers(){
-  const saved = localStorage.getItem('battery_sim_battery_offers');
-  if(saved){
-    try {
-      currentProfile.batteryOffers = JSON.parse(saved);
-    } catch(e){
-      console.error('Erreur chargement battery offers:', e);
-    }
+  if (chartConsInstance) {
+    doc.text("2. Profil de consommation estimé :", 20, y);
+    doc.addImage(document.getElementById('chartCons').toDataURL('image/png'), 'PNG', 20, y + 3, 170, 65);
+    y += 75;
   }
-}
 
-function clearP1Entries(){
-  if(confirm("Voulez-vous vraiment vider tous les relevés P1 enregistrés ?")){
-    currentProfile.p1Entries = [];
-    saveP1Entries();
-    refreshP1Table();
+  if (chartSimInstance) {
+    doc.text("3. Impact de la batterie sur l'import réseau :", 20, y);
+    doc.addImage(document.getElementById('chartSim').toDataURL('image/png'), 'PNG', 20, y + 3, 170, 65);
   }
+
+  doc.save(`rapport_batterie_${profileName.replace(/\s+/g, '_')}.pdf`);
 }
-
-function clearBatteryOffers(){
-  if(confirm("Voulez-vous vraiment supprimer toutes les offres batteries ?")){
-    currentProfile.batteryOffers = [];
-    saveBatteryOffers();
-    refreshBattTable();
-  }
-}
-
-// ============================================================
-// HELPER: CACHE POUR P1 & PV
-// ============================================================
-
-window.lastP1Curve = null;
-window.lastPVCurve = null;
-window.detectedAppliances = [];
