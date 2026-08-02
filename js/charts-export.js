@@ -1,12 +1,15 @@
-// ============================================================
-// INSTANCES DE GRAPHIQUES (Scope global window pour éviter les conflits)
-// ============================================================
+// Instances de graphiques (Scope global window)
 window.chartRawInstance = window.chartRawInstance || null;
 window.chartConsInstance = window.chartConsInstance || null;
 window.chartSimInstance = window.chartSimInstance || null;
 window.chartSocInstance = window.chartSocInstance || null;
 
-const chartHours = Array.from({length: 24}, (_, h) => h + 'h');
+// Création de 96 étiquettes (15-min intervals)
+const chartLabels = Array.from({length: 96}, (_, i) => {
+  const h = Math.floor(i / 4);
+  const m = (i % 4) * 15;
+  return m === 0 ? h + 'h' : ''; // Affiche uniquement l'heure pile pour ne pas surcharger l'axe
+});
 
 const commonChartOptions = {
   responsive: true,
@@ -35,31 +38,34 @@ function renderRawChart(res) {
   window.chartRawInstance = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: chartHours,
+      labels: chartLabels,
       datasets: [
         {
           label: 'Production PV (kWh)',
           data: res.productionCurve,
           borderColor: '#fbbf24',
-          backgroundColor: 'rgba(251,191,36,0.1)',
+          backgroundColor: 'rgba(251,191,36,0.08)',
           fill: true,
-          tension: 0.3
+          tension: 0.2,
+          pointRadius: 0
         },
         {
           label: 'Import Réseau P1 (kWh)',
           data: rawImport,
           borderColor: '#9d4edd',
-          backgroundColor: 'rgba(157,78,221,0.1)',
+          backgroundColor: 'rgba(157,78,221,0.08)',
           fill: true,
-          tension: 0.3
+          tension: 0.2,
+          pointRadius: 0
         },
         {
           label: 'Injection Réseau P1 (kWh)',
           data: rawExport,
           borderColor: '#2ec4b6',
-          backgroundColor: 'rgba(46,196,182,0.1)',
+          backgroundColor: 'rgba(46,196,182,0.08)',
           fill: true,
-          tension: 0.3
+          tension: 0.2,
+          pointRadius: 0
         }
       ]
     },
@@ -77,14 +83,15 @@ function renderConsChart(res) {
   window.chartConsInstance = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: chartHours,
+      labels: chartLabels,
       datasets: [{
         label: 'Consommation Totale Maison (kWh)',
         data: res.consumptionCurve,
         borderColor: '#f87171',
         backgroundColor: 'rgba(248,113,113,0.15)',
         fill: true,
-        tension: 0.3
+        tension: 0.2,
+        pointRadius: 0
       }]
     },
     options: commonChartOptions
@@ -101,7 +108,7 @@ function renderSimChart(res) {
   window.chartSimInstance = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: chartHours,
+      labels: chartLabels,
       datasets: [
         {
           label: 'Consommation Initiale (kWh)',
@@ -109,7 +116,8 @@ function renderSimChart(res) {
           borderColor: '#f87171',
           borderDash: [5, 5],
           fill: false,
-          tension: 0.3
+          tension: 0.2,
+          pointRadius: 0
         },
         {
           label: 'Nouvel Import Réseau avec Batterie (kWh)',
@@ -117,7 +125,8 @@ function renderSimChart(res) {
           borderColor: '#60a5fa',
           backgroundColor: 'rgba(96,165,250,0.2)',
           fill: true,
-          tension: 0.3
+          tension: 0.2,
+          pointRadius: 0
         }
       ]
     },
@@ -139,15 +148,15 @@ function renderSocChart(res) {
   window.chartSocInstance = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: chartHours,
+      labels: chartLabels,
       datasets: [{
         label: 'Niveau de charge (kWh)',
         data: res.withBatt.socHistory,
         borderColor: '#4ade80',
         backgroundColor: 'rgba(74,222,128,0.15)',
         fill: true,
-        tension: 0.3,
-        pointRadius: 2
+        tension: 0.2,
+        pointRadius: 0
       }]
     },
     options: {
