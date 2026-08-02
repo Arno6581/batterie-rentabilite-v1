@@ -1,5 +1,5 @@
 // ============================================================
-// SOLAR MODEL - THEORETICAL PRODUCTION
+// SOLAR MODEL - THEORETICAL PRODUCTION (96 points fallback)
 // ============================================================
 
 function orientationTiltFactor(tilt, azimuth){
@@ -33,7 +33,8 @@ function hourlyProductionCurve(dailyTotalKWh, avgAzimuth, monthIndex){
   const end = peakHour + daylightLength / 2;
 
   let weights = [];
-  for(let h = 0; h < 24; h++){
+  for(let i = 0; i < 96; i++){
+    const h = i / 4;
     if(h >= start && h <= end){
       const x = (h - peakHour) / (daylightLength / 2);
       weights.push(Math.max(0, Math.cos(x * Math.PI / 2)));
@@ -47,45 +48,47 @@ function hourlyProductionCurve(dailyTotalKWh, avgAzimuth, monthIndex){
 }
 
 // ============================================================
-// RECONSTRUCT CONSUMPTION FROM P1 - WITH ROBUST FALLBACK
+// RECONSTRUCT CONSUMPTION FROM P1 (96 points)
 // ============================================================
 
 function reconstructConsumptionFromP1(entry){
-  let hourlyConsumption = new Array(24).fill(0);
+  let hourlyConsumption = new Array(96).fill(0);
 
-  // Vérification de la validité de la courbe d'importation réelle
   const hasRealImport = entry.hourlyImport && entry.hourlyImport.reduce((a, b) => a + b, 0) > 0.05;
   const hasRealExport = entry.hourlyExport && entry.hourlyExport.reduce((a, b) => a + b, 0) > 0.05;
   const hasRealProd = entry.hourlyProduction && entry.hourlyProduction.reduce((a, b) => a + b, 0) > 0.05;
 
   if(hasRealImport && hasRealExport && hasRealProd){
-    // Cas idéal : nous avons les 3 courbes brutes réelles extraites des images
-    for(let h = 0; h < 24; h++){
-      const prod = entry.hourlyProduction[h] || 0;
-      const imp = entry.hourlyImport[h] || 0;
-      const exp = entry.hourlyExport[h] || 0;
-      hourlyConsumption[h] = Math.max(0, prod - exp + imp);
+    for(let i = 0; i < 96; i++){
+      const prod = entry.hourlyProduction[i] || 0;
+      const imp = entry.hourlyImport[i] || 0;
+      const exp = entry.hourlyExport[i] || 0;
+      hourlyConsumption[i] = Math.max(0, prod - exp + imp);
     }
   } else {
-    // Cas de secours : calibration du modèle théorique à partir des totaux entrés à la main
-    const shape = baseLoadShape();
-    const sumShape = shape.reduce((a, b) => a + b, 0);
+    // Fallback : Interpolation de la courbe type de 24 à 96 points
+    const shape24 = baseLoadShape();
+    let shape96 = [];
+    for(let i = 0; i < 96; i++){
+      shape96.push(shape24[Math.floor(i / 4)]);
+    }
+    const sumShape = shape96.reduce((a, b) => a + b, 0);
     const estimatedTotal = entry.grid + Math.max(0, (entry.pvProduction || 0) - entry.surplus);
-    hourlyConsumption = shape.map(v => (v / sumShape) * Math.max(estimatedTotal, 1));
+    hourlyConsumption = shape96.map(v => (v / sumShape) * Math.max(estimatedTotal, 1));
   }
 
   return hourlyConsumption;
 }
 
 // ============================================================
-// BATTERY SIMULATION
+// BATTERY SIMULATION (96 points - 15 minutes scale)
 // ============================================================
 
 function simulateDayWithBattery(productionCurve, consumptionCurve, battery){
   let soc = battery.capacity * 0.2; // Remplissage initial à 20%
   const maxSoc = battery.capacity;
-  const minSoc = battery.capacity * 0.1; // Limite de décharge 10%
-  const chargeRate = battery.power;
+  const minSoc = battery.capacity * 0.1;
+  const maxPower15Min = battery.power * 0.25; // max charge/discharge energy in 15 mins (kW * 0.25h)
   const efficiency = battery.efficiency || 0.9;
 
   let gridImport = 0;
@@ -93,25 +96,27 @@ function simulateDayWithBattery(productionCurve, consumptionCurve, battery){
   let socHistory = [];
   let hourly = [];
 
-  for(let h = 0; h < 24; h++){
-    const prod = productionCurve[h];
-    const cons = consumptionCurve[h];
-    let net = prod - cons;
+  for(let i = 0; i < 96; i++){
+    const prod = productionCurve[i];
+    const cons = consumptionCurve[i];
+    let net = prod - cons; // en kWh
     let batteryFlow = 0;
     let hImport = 0;
     let hExport = 0;
 
     if(net > 0){
+      // Excès solaire -> Charge
       const room = (maxSoc - soc) / efficiency;
-      const charge = Math.min(chargeRate, net, room);
+      const charge = Math.min(maxPower15Min, net, room);
       batteryFlow = charge;
       soc += charge * efficiency;
       hExport = net - charge;
       gridExport += hExport;
     } else {
+      // Déficit de consommation -> Décharge
       const deficit = -net;
       const available = soc - minSoc;
-      const discharge = Math.min(chargeRate, deficit, Math.max(0, available));
+      const discharge = Math.min(maxPower15Min, deficit, Math.max(0, available));
       batteryFlow = -discharge;
       soc -= discharge;
       hImport = deficit - discharge;
@@ -120,7 +125,7 @@ function simulateDayWithBattery(productionCurve, consumptionCurve, battery){
 
     socHistory.push(soc);
     hourly.push({
-      hour: h,
+      timeIndex: i,
       production: prod,
       consumption: cons,
       batteryFlow,
@@ -136,8 +141,8 @@ function simulateDayWithoutBattery(productionCurve, consumptionCurve){
   let gridImport = 0;
   let gridExport = 0;
 
-  for(let h = 0; h < 24; h++){
-    const net = productionCurve[h] - consumptionCurve[h];
+  for(let i = 0; i < 96; i++){
+    const net = productionCurve[i] - consumptionCurve[i];
     if(net > 0){
       gridExport += net;
     } else {
@@ -159,7 +164,7 @@ function computeDailyCost(gridImport, gridExport, tariff){
 }
 
 // ============================================================
-// MAIN SIMULATION RUNNERS
+// MAIN SIMULATION RUNNER
 // ============================================================
 
 function getMonthIndexFromDate(dateStr){
@@ -236,7 +241,7 @@ function runSimulation(){
   document.getElementById('resPayback').textContent = isFinite(res.payback) ?
     res.payback.toFixed(1) + ' ans' : 'N/A';
 
-  // Lance les rendus de graphiques (charts-export.js)
+  // Render Charts
   renderRawChart(res);
   renderConsChart(res);
   renderSimChart(res);
