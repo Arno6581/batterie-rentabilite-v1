@@ -22,7 +22,8 @@ function rgbToHsl(r, g, b){
 }
 
 function isPurpleHSL(hsl){
-  return hsl.h >= 240 && hsl.h <= 315 && hsl.s > 25 && hsl.l > 15 && hsl.l < 85;
+  // Élargissement de la plage de teinte (Hue) jusqu'à 350° pour capturer le magenta/rose HomeWizard
+  return hsl.h >= 240 && hsl.h <= 350 && hsl.s > 25 && hsl.l > 15 && hsl.l < 85;
 }
 
 function isGreenHSL(hsl){
